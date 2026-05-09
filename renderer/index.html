@@ -322,10 +322,15 @@
 // ════════════════════════════════════════════════════════════════════
 
 let config = {};            // loaded from userData JSON
-let recognition = null;
 let isListening  = false;
 let isSpeaking   = false;
 let messages     = [];      // chat history
+
+// ── MediaRecorder-based voice capture ────────────────────────────────
+let mediaRecorder  = null;
+let audioChunks    = [];
+let micStream      = null;
+let recordingTimer = null;   // safety timeout (max 30s)
 
 const SYSTEM_PROMPT = `You are Nova, a helpful, concise voice assistant. 
 Keep responses short and conversational (1-3 sentences unless detail is needed).
@@ -347,7 +352,6 @@ async function initApp() {
   populateVoices();
   await populateMics();
   applyConfig();
-  setupRecognition();
   addMessage('system', 'Nova is ready. Click the orb or press Alt+Space to speak.');
 }
 
@@ -370,7 +374,7 @@ function applyConfig() {
   if (config.voiceName) voiceSel.value = config.voiceName;
 
   modelSel.onchange = () => { config.model = modelSel.value; saveConfig(); };
-  micSel.onchange   = () => { config.micDeviceId = micSel.value; saveConfig(); setupRecognition(); };
+  micSel.onchange   = () => { config.micDeviceId = micSel.value; saveConfig(); toast('Mic updated'); };
   voiceSel.onchange = () => { config.voiceName = voiceSel.value; saveConfig(); };
 }
 
@@ -441,88 +445,146 @@ function populateVoices() {
   speechSynthesis.onvoiceschanged = fill;
 }
 
-// ── Speech recognition ────────────────────────────────────────────────
-function setupRecognition() {
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) { setStatus('Speech recognition not supported'); return; }
-
-  if (recognition) { try { recognition.abort(); } catch{} }
-
-  recognition = new SR();
-  recognition.continuous     = false;
-  recognition.interimResults = true;
-  recognition.lang           = 'en-US';
-
-  recognition.onstart = () => {
-    isListening = true;
-    setOrb('listening');
-    setStatus('Listening…');
-  };
-
-  recognition.onresult = (e) => {
-    let interim = '', final = '';
-    for (let i = e.resultIndex; i < e.results.length; i++) {
-      if (e.results[i].isFinal) final += e.results[i][0].transcript;
-      else interim += e.results[i][0].transcript;
-    }
-    document.getElementById('transcript').textContent = final || interim;
-    if (final) {
-      document.getElementById('transcript').textContent = '';
-      handleVoiceInput(final.trim());
-    }
-  };
-
-  recognition.onerror = (e) => {
-    console.warn('SR error:', e.error);
-    if (e.error === 'not-allowed') setStatus('Mic access denied — check permissions');
-    else if (e.error !== 'aborted') setStatus('Mic error: ' + e.error);
-    stopListening();
-  };
-
-  recognition.onend = () => {
-    if (isListening) {
-      // auto-restart if not intentionally stopped
-      try { recognition.start(); } catch{}
-    } else {
-      setOrb('idle');
-      setStatus('Click orb or press Alt+Space to speak');
-    }
-  };
-}
-
+// ── Voice recording (MediaRecorder → Whisper) ─────────────────────────
 function toggleListening() {
   if (isSpeaking) { stopSpeaking(); return; }
   if (isListening) stopListening();
   else startListening();
 }
 
-function startListening() {
-  if (!recognition) { setupRecognition(); }
+async function startListening() {
+  if (isListening) return;
   if (isSpeaking) stopSpeaking();
-  stopSpeaking();
+
+  try {
+    const constraints = { audio: true };
+    if (config.micDeviceId) {
+      constraints.audio = { deviceId: { exact: config.micDeviceId } };
+    }
+
+    micStream = await navigator.mediaDevices.getUserMedia(constraints);
+  } catch (e) {
+    console.error('Mic access failed:', e);
+    setStatus('Mic access denied — check permissions');
+    toast('Cannot access microphone: ' + e.message);
+    return;
+  }
+
+  audioChunks = [];
+  const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+    ? 'audio/webm;codecs=opus'
+    : MediaRecorder.isTypeSupported('audio/webm')
+      ? 'audio/webm'
+      : '';
+
+  mediaRecorder = new MediaRecorder(micStream, mimeType ? { mimeType } : {});
+
+  mediaRecorder.ondataavailable = e => {
+    if (e.data && e.data.size > 0) audioChunks.push(e.data);
+  };
+
+  mediaRecorder.onstop = () => {
+    // Release mic
+    if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+    if (audioChunks.length === 0) {
+      setOrb('idle');
+      setStatus('Click orb or press Alt+Space to speak');
+      return;
+    }
+    const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+    audioChunks = [];
+    transcribeAudio(blob);
+  };
+
+  mediaRecorder.start(100); // collect in 100ms chunks
   isListening = true;
-  try { recognition.start(); }
-  catch(e) { console.warn('SR start:', e); }
+  setOrb('listening');
+  setStatus('Recording… click orb again to send');
+  document.getElementById('transcript').textContent = '🎙 Recording…';
+
+  // Safety: auto-stop after 30s
+  clearTimeout(recordingTimer);
+  recordingTimer = setTimeout(() => { if (isListening) stopListening(); }, 30000);
 }
 
 function stopListening() {
+  clearTimeout(recordingTimer);
   isListening = false;
-  try { recognition.stop(); } catch{}
-  setOrb('idle');
-  setStatus('Click orb or press Alt+Space to speak');
-  document.getElementById('transcript').textContent = '';
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    mediaRecorder.stop(); // triggers onstop → transcribeAudio
+  } else {
+    if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+    setOrb('idle');
+    setStatus('Click orb or press Alt+Space to speak');
+    document.getElementById('transcript').textContent = '';
+  }
 }
 
-// Esc stops listening
+async function transcribeAudio(blob) {
+  setOrb('thinking');
+  setStatus('Transcribing…');
+  document.getElementById('transcript').textContent = '✦ Processing speech…';
+
+  try {
+    const formData = new FormData();
+    // Whisper expects a file with an extension it recognises
+    formData.append('file', blob, 'audio.webm');
+    formData.append('model', 'openai/whisper-large-v3');
+
+    const resp = await fetch('https://openrouter.ai/api/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + config.apiKey,
+        'HTTP-Referer':  'https://nova-assistant.app',
+        'X-Title':       'Nova Voice Assistant',
+      },
+      body: formData,
+    });
+
+    if (!resp.ok) {
+      // Whisper might not be available on free tier — fallback to browser SR
+      console.warn('Whisper failed, trying browser SR fallback');
+      document.getElementById('transcript').textContent = '';
+      setOrb('idle');
+      setStatus('Transcription failed — try typing instead');
+      toast('Voice transcription failed (API error ' + resp.status + ')');
+      return;
+    }
+
+    const data = await resp.json();
+    const text = (data.text || '').trim();
+
+    if (!text) {
+      document.getElementById('transcript').textContent = '';
+      setOrb('idle');
+      setStatus('Nothing heard — try again');
+      return;
+    }
+
+    // Show what was said
+    document.getElementById('transcript').textContent = '"' + text + '"';
+    setTimeout(() => { document.getElementById('transcript').textContent = ''; }, 3000);
+
+    handleVoiceInput(text);
+
+  } catch (e) {
+    console.error('Transcription error:', e);
+    document.getElementById('transcript').textContent = '';
+    setOrb('idle');
+    setStatus('Transcription failed: ' + e.message);
+  }
+}
+
+// Esc stops listening/recording
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { stopListening(); stopSpeaking(); }
 });
 
 // ── Voice command parsing ─────────────────────────────────────────────
 function handleVoiceInput(text) {
-  const lower = text.toLowerCase();
-  if (lower.match(/^(clear|reset|new chat)$/)) { clearChat(); return; }
-  if (lower.match(/^stop$/)) { stopSpeaking(); return; }
+  const lower = text.toLowerCase().trim();
+  if (/^(clear|reset|new chat)$/.test(lower)) { clearChat(); return; }
+  if (/^stop$/.test(lower)) { stopSpeaking(); return; }
   // Otherwise send to AI
   sendMessage(text);
 }

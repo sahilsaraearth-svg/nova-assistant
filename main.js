@@ -110,6 +110,8 @@ app.on('will-quit', () => globalShortcut.unregisterAll());
 
 app.commandLine.appendSwitch('enable-speech-dispatcher');
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
+// Allow MediaRecorder + getUserMedia in Electron
+app.commandLine.appendSwitch('enable-media-stream');
 
 app.whenReady().then(() => {
   createWindow();
