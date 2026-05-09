@@ -2,8 +2,8 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
   config: {
-    get: ()       => ipcRenderer.invoke('config:get'),
-    set: (data)   => ipcRenderer.invoke('config:set', data),
+    get:  ()     => ipcRenderer.invoke('config:get'),
+    set:  (data) => ipcRenderer.invoke('config:set', data),
   },
   window: {
     close:    () => ipcRenderer.invoke('window:close'),
@@ -11,5 +11,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   shell: {
     open: (url) => ipcRenderer.invoke('shell:open', url),
+  },
+  exec: {
+    launch: (cmd) => ipcRenderer.invoke('exec:launch', cmd),
   },
 });

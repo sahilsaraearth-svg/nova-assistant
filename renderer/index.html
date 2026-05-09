@@ -56,7 +56,7 @@
   #setup{
     position:fixed;inset:0;z-index:100;
     background:var(--bg);
-    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    display:none;flex-direction:column;align-items:center;justify-content:center;
     gap:20px;padding:32px;
   }
   #setup h2{font-size:22px;font-weight:700;
@@ -73,12 +73,10 @@
   #setup .hint a{color:var(--accent2);cursor:pointer}
 
   /* ── Main layout ── */
-  #main{display:flex;flex-direction:column;height:700px}
-
-  /* ── Content tabs ── */
-  #content{flex:1;display:flex;flex-direction:column;overflow:hidden}
+  #main{display:none;flex-direction:column;height:700px}
 
   /* ── Chat area ── */
+  #chatView{flex:1;display:flex;flex-direction:column;overflow:hidden}
   #chatWrap{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
   #chatWrap::-webkit-scrollbar{width:4px}
   #chatWrap::-webkit-scrollbar-track{background:transparent}
@@ -86,12 +84,11 @@
 
   .msg{max-width:88%;padding:10px 13px;border-radius:12px;line-height:1.55;font-size:13.5px;word-break:break-word}
   .msg.user{align-self:flex-end;background:var(--accent);color:#fff;border-bottom-right-radius:3px}
-  .msg.nova{align-self:flex-start;background:var(--card);color:var(--text);border-bottom-left-radius:3px;
-    border:1px solid var(--border)}
+  .msg.nova{align-self:flex-start;background:var(--card);color:var(--text);border-bottom-left-radius:3px;border:1px solid var(--border)}
   .msg.system{align-self:center;background:transparent;color:var(--muted);font-size:12px;font-style:italic}
 
-  /* ── Orb ── */
-  #orbWrap{display:flex;flex-direction:column;align-items:center;gap:10px;padding:14px 0 8px}
+  /* ── Orb area ── */
+  #orbWrap{display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 0 6px}
   #orb{
     width:72px;height:72px;border-radius:50%;cursor:pointer;
     background:radial-gradient(circle at 35% 35%,var(--accent2),var(--accent) 60%,#4c35c4);
@@ -102,20 +99,27 @@
   }
   #orb:hover{transform:scale(1.07);box-shadow:0 0 28px var(--accent)66,0 0 50px var(--accent)33}
   #orb.listening{animation:orbPulse 1s ease-in-out infinite}
-  #orb.thinking{animation:orbSpin 1.5s linear infinite}
-  #orb.speaking{animation:orbGlow 0.8s ease-in-out infinite alternate}
+  #orb.thinking {animation:orbSpin  1.5s linear infinite}
+  #orb.speaking {animation:orbGlow  0.8s ease-in-out infinite alternate}
   @keyframes orbPulse{0%,100%{box-shadow:0 0 20px var(--accent)66,0 0 40px var(--accent)33}
-    50%{box-shadow:0 0 35px var(--accent)99,0 0 60px var(--accent)55}}
+    50%{box-shadow:0 0 40px var(--accent)cc,0 0 70px var(--accent)55}}
   @keyframes orbSpin{from{filter:hue-rotate(0deg)}to{filter:hue-rotate(360deg)}}
-  @keyframes orbGlow{from{box-shadow:0 0 20px var(--accent2)55}to{box-shadow:0 0 40px var(--accent2)cc}}
+  @keyframes orbGlow{from{box-shadow:0 0 20px var(--accent2)55}to{box-shadow:0 0 50px var(--accent2)dd}}
 
-  #statusTxt{color:var(--muted);font-size:12px;letter-spacing:.5px}
+  #statusTxt{color:var(--muted);font-size:12px;letter-spacing:.5px;text-align:center}
+
+  /* Live transcript box — shows what you're saying in real time */
   #transcript{
-    min-height:36px;max-height:60px;overflow:hidden;
+    min-height:38px;max-height:56px;overflow:hidden;
+    margin:0 16px;
+    background:var(--card);border:1px solid var(--border);border-radius:8px;
+    padding:8px 12px;
     color:var(--accent2);font-size:13px;font-style:italic;
-    text-align:center;padding:0 20px;line-height:1.4;
-    transition:opacity .3s;
+    text-align:center;line-height:1.4;
+    display:none;  /* hidden when not listening */
   }
+  #transcript.active{display:block}
+  #interim{color:var(--muted)}
 
   /* ── Input bar ── */
   #inputBar{
@@ -126,7 +130,7 @@
   #textInput{
     flex:1;padding:9px 12px;border-radius:8px;
     border:1px solid var(--border);background:var(--card);
-    color:var(--text);font-size:13px;outline:none;resize:none;
+    color:var(--text);font-size:13px;outline:none;
     transition:border .2s;
   }
   #textInput:focus{border-color:var(--accent)}
@@ -141,7 +145,7 @@
   /* ── Settings panel ── */
   #settingsPanel{
     display:none;flex-direction:column;
-    height:100%;overflow-y:auto;padding:16px;gap:14px;
+    flex:1;overflow-y:auto;padding:16px;gap:14px;
   }
   #settingsPanel::-webkit-scrollbar{width:4px}
   #settingsPanel::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
@@ -158,7 +162,7 @@
   /* Commands table */
   .cmdTable{width:100%;border-collapse:collapse;font-size:12.5px}
   .cmdTable td{padding:5px 4px;color:var(--muted);vertical-align:top}
-  .cmdTable td:first-child{color:var(--accent2);font-weight:500;white-space:nowrap;padding-right:10px;width:44%}
+  .cmdTable td:first-child{color:var(--accent2);font-weight:500;white-space:nowrap;padding-right:10px;width:50%}
   .cmdTable tr:not(:last-child) td{border-bottom:1px solid var(--border)33}
 
   /* ── Bottom nav ── */
@@ -175,10 +179,7 @@
   .navBtn:hover{color:var(--text)}
 
   /* ── Buttons ── */
-  .btn{
-    padding:11px 20px;border-radius:9px;border:none;cursor:pointer;
-    font-size:14px;font-weight:600;transition:opacity .15s;
-  }
+  .btn{padding:11px 20px;border-radius:9px;border:none;cursor:pointer;font-size:14px;font-weight:600;transition:opacity .15s}
   .btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
   .btn-primary:hover{opacity:.88}
 
@@ -198,23 +199,23 @@
     animation:bounce .8s ease-in-out infinite}
   .typing span:nth-child(2){animation-delay:.15s}
   .typing span:nth-child(3){animation-delay:.3s}
-  @keyframes bounce{0%,80%,100%{transform:scale(0.6);opacity:.4}40%{transform:scale(1);opacity:1}}
+  @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
 </style>
 </head>
 <body>
 
-<!-- ── Setup Overlay ── -->
-<div id="setup" style="display:none">
-  <div class="orb-small" style="width:56px;height:56px;box-shadow:0 0 24px var(--accent)"></div>
+<!-- ── Setup overlay ── -->
+<div id="setup">
+  <div class="orb-small" style="width:48px;height:48px;margin-bottom:4px"></div>
   <h2>Welcome to Nova</h2>
-  <p>Nova uses OpenRouter to power AI responses.<br>Enter your OpenRouter API key to get started.</p>
-  <input type="password" id="setupKey" placeholder="sk-or-v1-..." autocomplete="off" spellcheck="false"/>
-  <p class="hint">Get a free key at <a onclick="openRouter()">openrouter.ai</a> — it's free!</p>
-  <button class="btn btn-primary" id="setupSave" style="width:100%">Start Nova →</button>
+  <p>Enter your OpenRouter API key to get started.<br>Your key is stored locally — never sent anywhere except OpenRouter.</p>
+  <input type="password" id="setupKey" placeholder="sk-or-v1-…" autocomplete="off" spellcheck="false"/>
+  <button class="btn btn-primary" id="setupSave" style="width:100%">Get Started</button>
+  <p class="hint">Free key at <a onclick="electronAPI.shell.open('https://openrouter.ai/keys')">openrouter.ai/keys ↗</a></p>
 </div>
 
-<!-- ── Main App ── -->
-<div id="main" style="display:none">
+<!-- ── Main app ── -->
+<div id="main">
 
   <!-- Titlebar -->
   <div id="titlebar">
@@ -229,26 +230,34 @@
     </div>
   </div>
 
-  <!-- Content area -->
-  <div id="content">
+  <!-- Content -->
+  <div id="content" style="flex:1;display:flex;flex-direction:column;overflow:hidden">
 
     <!-- Chat view -->
     <div id="chatView" style="flex:1;display:flex;flex-direction:column;overflow:hidden">
       <div id="chatWrap"></div>
+
+      <!-- Orb + status + live transcript -->
       <div id="orbWrap">
-        <div id="orb" onclick="toggleListening()" title="Click to speak (or Alt+Space)">🎙</div>
+        <div id="orb" onclick="toggleListening()" title="Click to speak (Alt+Space)">🎙</div>
         <div id="statusTxt">Click orb or press Alt+Space to speak</div>
-        <div id="transcript"></div>
       </div>
+
+      <!-- Live speech transcript -->
+      <div id="transcript">
+        <span id="final"></span><span id="interim"></span>
+      </div>
+
+      <!-- Text input -->
       <div id="inputBar">
-        <input type="text" id="textInput" placeholder="Type a message…" autocomplete="off"/>
+        <input type="text" id="textInput" placeholder="Type a message…" autocomplete="off" spellcheck="false"/>
         <button id="sendBtn" onclick="sendText()" title="Send">➤</button>
       </div>
     </div>
 
-    <!-- Settings view -->
+    <!-- Settings panel -->
     <div id="settingsPanel">
-      <h3>⚙ Settings</h3>
+      <h3>Settings</h3>
 
       <div class="sSection">
         <div class="sRow">
@@ -257,20 +266,21 @@
             <option value="minimax/minimax-m2.5:free">MiniMax M2.5 (free)</option>
             <option value="mistralai/mistral-7b-instruct:free">Mistral 7B (free)</option>
             <option value="meta-llama/llama-3.2-3b-instruct:free">Llama 3.2 3B (free)</option>
-            <option value="google/gemma-3-4b-it:free">Gemma 3 4B (free)</option>
-            <option value="qwen/qwen3-8b:free">Qwen3 8B (free)</option>
+            <option value="google/gemma-3-1b-it:free">Gemma 3 1B (free)</option>
+            <option value="deepseek/deepseek-chat-v3-0324:free">DeepSeek V3 (free)</option>
             <option value="openai/gpt-4o-mini">GPT-4o Mini</option>
-            <option value="anthropic/claude-3-haiku">Claude 3 Haiku</option>
           </select>
         </div>
+
         <div class="sRow">
           <span class="sLabel">MICROPHONE</span>
           <select class="sSelect" id="micSelect">
             <option value="">Default microphone</option>
           </select>
         </div>
+
         <div class="sRow">
-          <span class="sLabel">VOICE</span>
+          <span class="sLabel">TTS VOICE</span>
           <select class="sSelect" id="voiceSelect">
             <option value="">Default voice</option>
           </select>
@@ -278,28 +288,34 @@
       </div>
 
       <div class="sSection">
-        <h3 style="font-size:13px;margin-bottom:0">⌨ Voice Commands</h3>
+        <h3 style="font-size:13px;margin-bottom:2px">🎤 Voice Commands</h3>
         <table class="cmdTable">
-          <tr><td>Hey Nova / Go</td><td>Send message to AI</td></tr>
-          <tr><td>Clear / Reset</td><td>Clear conversation</td></tr>
-          <tr><td>Stop</td><td>Stop Nova speaking</td></tr>
-          <tr><td>Alt+Space</td><td>Toggle microphone</td></tr>
-          <tr><td>Esc</td><td>Stop listening</td></tr>
+          <tr><td>"clear" / "reset"</td><td>Clear conversation</td></tr>
+          <tr><td>"stop"</td><td>Stop Nova speaking</td></tr>
+          <tr><td>"open VS Code"</td><td>Launch VS Code</td></tr>
+          <tr><td>"open notepad"</td><td>Launch Notepad</td></tr>
+          <tr><td>"open chrome"</td><td>Launch Chrome</td></tr>
+          <tr><td>"open calculator"</td><td>Launch Calculator</td></tr>
+          <tr><td>"open file explorer"</td><td>Launch Explorer</td></tr>
+          <tr><td>"open [any app]"</td><td>Try to launch it</td></tr>
+          <tr><td>Alt+Space</td><td>Toggle mic on/off</td></tr>
+          <tr><td>Esc</td><td>Stop listening / stop speaking</td></tr>
         </table>
       </div>
 
       <div class="sSection">
-        <h3 style="font-size:13px;margin-bottom:0">🔑 API Key</h3>
-        <span class="sLabel" style="color:var(--green)">✓ OpenRouter key is saved</span>
+        <h3 style="font-size:13px;margin-bottom:2px">🔑 API Key</h3>
+        <span class="sLabel" style="color:var(--green)">✓ OpenRouter key saved</span>
         <button class="btn" onclick="resetKey()"
-          style="background:var(--card);border:1px solid var(--border);color:var(--danger);font-size:12px;padding:7px 12px;margin-top:4px;width:fit-content">
+          style="background:var(--card);border:1px solid var(--border);color:var(--danger);font-size:12px;padding:7px 12px;width:fit-content">
           Reset key (re-enter on next launch)
         </button>
       </div>
 
-      <div class="sSection" style="align-items:center">
+      <div class="sSection" style="align-items:center;gap:6px">
         <span class="sLabel">Nova v1.0.0 · Powered by OpenRouter</span>
-        <a style="color:var(--accent2);font-size:12px;cursor:pointer" onclick="electronAPI.shell.open('https://openrouter.ai')">openrouter.ai ↗</a>
+        <a style="color:var(--accent2);font-size:12px;cursor:pointer"
+           onclick="electronAPI.shell.open('https://openrouter.ai')">openrouter.ai ↗</a>
       </div>
     </div>
 
@@ -307,8 +323,8 @@
 
   <!-- Bottom nav -->
   <div id="nav">
-    <button class="navBtn active" id="navChat" onclick="switchTab('chat')" title="Chat">💬</button>
-    <button class="navBtn" id="navSettings" onclick="switchTab('settings')" title="Settings">⚙</button>
+    <button class="navBtn active" id="navChat"     onclick="switchTab('chat')"     title="Chat">💬</button>
+    <button class="navBtn"        id="navSettings" onclick="switchTab('settings')" title="Settings">⚙</button>
   </div>
 
 </div>
@@ -317,33 +333,30 @@
 <div id="toast"></div>
 
 <script>
-// ════════════════════════════════════════════════════════════════════
-//  Nova Renderer — all logic
-// ════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
+//  Nova — Renderer
+// ════════════════════════════════════════════════════════════════════════════
 
-let config = {};            // loaded from userData JSON
-let isListening  = false;
-let isSpeaking   = false;
-let messages     = [];      // chat history
+let config      = {};
+let isListening = false;
+let isSpeaking  = false;
+let messages    = [];   // chat history for context
 
-// ── MediaRecorder-based voice capture ────────────────────────────────
-let mediaRecorder  = null;
-let audioChunks    = [];
-let micStream      = null;
-let recordingTimer = null;   // safety timeout (max 30s)
+// SpeechRecognition instance (created once, reused)
+let SR     = null;
+let srBusy = false;   // prevent double-start
 
-const SYSTEM_PROMPT = `You are Nova, a helpful, concise voice assistant. 
-Keep responses short and conversational (1-3 sentences unless detail is needed).
-Be friendly and natural.`;
+const SYSTEM_PROMPT = `You are Nova, a helpful voice assistant on Windows. 
+Keep responses short and conversational — 1-3 sentences unless the user asks for detail.
+Be friendly, direct, and natural.`;
 
-// ── Boot ─────────────────────────────────────────────────────────────
+// ── Boot ─────────────────────────────────────────────────────────────────────
 async function boot() {
   config = await electronAPI.config.get();
-
   if (!config.apiKey) {
     document.getElementById('setup').style.display = 'flex';
   } else {
-    document.getElementById('main').style.display  = 'flex';
+    document.getElementById('main').style.display = 'flex';
     initApp();
   }
 }
@@ -352,33 +365,34 @@ async function initApp() {
   populateVoices();
   await populateMics();
   applyConfig();
-  addMessage('system', 'Nova is ready. Click the orb or press Alt+Space to speak.');
+  setupSR();   // init speech recognition now
+  addMessage('system', 'Nova ready — click the orb or press Alt+Space to speak.');
 }
 
-// ── Config helpers ────────────────────────────────────────────────────
-function saveConfig() {
-  electronAPI.config.set(config);
-}
+// ── Config ────────────────────────────────────────────────────────────────────
+function saveConfig() { electronAPI.config.set(config); }
 
 function applyConfig() {
-  const modelSel = document.getElementById('modelSelect');
-  if (config.model) modelSel.value = config.model;
+  const m = document.getElementById('modelSelect');
+  if (config.model) m.value = config.model;
+  m.onchange = () => { config.model = m.value; saveConfig(); };
 
-  const micSel = document.getElementById('micSelect');
-  if (config.micDeviceId) {
-    // set after options are populated
-    micSel.value = config.micDeviceId;
-  }
+  const mic = document.getElementById('micSelect');
+  if (config.micDeviceId) mic.value = config.micDeviceId;
+  mic.onchange = () => {
+    config.micDeviceId = mic.value;
+    saveConfig();
+    // Rebuild SR with new mic
+    setupSR();
+    toast('Mic updated');
+  };
 
-  const voiceSel = document.getElementById('voiceSelect');
-  if (config.voiceName) voiceSel.value = config.voiceName;
-
-  modelSel.onchange = () => { config.model = modelSel.value; saveConfig(); };
-  micSel.onchange   = () => { config.micDeviceId = micSel.value; saveConfig(); toast('Mic updated'); };
-  voiceSel.onchange = () => { config.voiceName = voiceSel.value; saveConfig(); };
+  const v = document.getElementById('voiceSelect');
+  if (config.voiceName) v.value = config.voiceName;
+  v.onchange = () => { config.voiceName = v.value; saveConfig(); };
 }
 
-// ── Setup screen ──────────────────────────────────────────────────────
+// ── Setup screen ──────────────────────────────────────────────────────────────
 document.getElementById('setupSave').onclick = async () => {
   const key = document.getElementById('setupKey').value.trim();
   if (!key || !key.startsWith('sk-or-')) {
@@ -396,48 +410,46 @@ document.getElementById('setupKey').addEventListener('keydown', e => {
   if (e.key === 'Enter') document.getElementById('setupSave').click();
 });
 
-function openRouter() { electronAPI.shell.open('https://openrouter.ai/keys'); }
-
 function resetKey() {
   config.apiKey = '';
   saveConfig();
   toast('Key cleared — restart Nova to re-enter');
 }
 
-// ── Mic enumeration ───────────────────────────────────────────────────
+// ── Mic enumeration ───────────────────────────────────────────────────────────
 async function populateMics() {
   try {
-    // Request permission first so labels are available
+    // Must call getUserMedia first so labels are visible
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    stream.getTracks().forEach(t => t.stop()); // release immediately
+    stream.getTracks().forEach(t => t.stop());
 
     const devices = await navigator.mediaDevices.enumerateDevices();
     const mics    = devices.filter(d => d.kind === 'audioinput');
     const sel     = document.getElementById('micSelect');
     sel.innerHTML = '<option value="">Default microphone</option>';
     mics.forEach(d => {
-      const opt = document.createElement('option');
-      opt.value = d.deviceId;
-      opt.text  = d.label || `Microphone ${sel.options.length}`;
-      sel.appendChild(opt);
+      const o = document.createElement('option');
+      o.value = d.deviceId;
+      o.text  = d.label || `Microphone ${sel.options.length}`;
+      sel.appendChild(o);
     });
     if (config.micDeviceId) sel.value = config.micDeviceId;
   } catch(e) {
-    console.warn('Mic enum failed:', e);
+    console.warn('Mic enum:', e.message);
   }
 }
 
-// ── Voice enumeration ─────────────────────────────────────────────────
+// ── TTS voice enumeration ─────────────────────────────────────────────────────
 function populateVoices() {
   const fill = () => {
     const voices = speechSynthesis.getVoices();
     const sel    = document.getElementById('voiceSelect');
     sel.innerHTML = '<option value="">Default voice</option>';
     voices.forEach(v => {
-      const opt = document.createElement('option');
-      opt.value = v.name;
-      opt.text  = `${v.name} (${v.lang})`;
-      sel.appendChild(opt);
+      const o = document.createElement('option');
+      o.value = v.name;
+      o.text  = `${v.name} (${v.lang})`;
+      sel.appendChild(o);
     });
     if (config.voiceName) sel.value = config.voiceName;
   };
@@ -445,151 +457,226 @@ function populateVoices() {
   speechSynthesis.onvoiceschanged = fill;
 }
 
-// ── Voice recording (MediaRecorder → Whisper) ─────────────────────────
+// ── Speech Recognition setup ──────────────────────────────────────────────────
+function setupSR() {
+  const SpeechAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechAPI) {
+    console.warn('SpeechRecognition not available');
+    setStatus('Voice not available — use text input');
+    return;
+  }
+
+  // Tear down old instance cleanly
+  if (SR) {
+    try { SR.abort(); } catch {}
+    SR = null;
+    srBusy = false;
+  }
+
+  SR = new SpeechAPI();
+  SR.lang           = 'en-US';
+  SR.continuous     = true;     // keep listening until we manually stop
+  SR.interimResults = true;     // show partial results in real time
+  SR.maxAlternatives = 1;
+
+  SR.onstart = () => {
+    srBusy = true;
+    isListening = true;
+    setOrb('listening');
+    setStatus('Listening… (click orb or Esc to stop)');
+    showTranscript(true);
+  };
+
+  SR.onresult = (e) => {
+    let interimText = '';
+    let finalText   = '';
+
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const t = e.results[i][0].transcript;
+      if (e.results[i].isFinal) finalText += t;
+      else interimText += t;
+    }
+
+    // Update live transcript display
+    document.getElementById('final').textContent   = finalText;
+    document.getElementById('interim').textContent = interimText;
+
+    if (finalText.trim()) {
+      // Freeze display briefly so user can read what was captured
+      document.getElementById('final').textContent   = finalText.trim();
+      document.getElementById('interim').textContent = '';
+      // Process the command/message
+      setTimeout(() => {
+        document.getElementById('final').textContent = '';
+        handleVoiceInput(finalText.trim());
+      }, 600);
+    }
+  };
+
+  SR.onerror = (e) => {
+    console.warn('SR error:', e.error, e.message);
+    srBusy = false;
+    if (e.error === 'not-allowed') {
+      setStatus('Mic access denied');
+      toast('Microphone permission denied');
+      stopListening();
+    } else if (e.error === 'network') {
+      setStatus('Network error — speech recognition needs internet');
+      stopListening();
+    } else if (e.error === 'no-speech') {
+      // Not a real error — just silence, keep listening
+    } else if (e.error !== 'aborted') {
+      setStatus('SR error: ' + e.error);
+      stopListening();
+    }
+  };
+
+  SR.onend = () => {
+    srBusy = false;
+    if (isListening) {
+      // Auto-restart to keep continuous listening going
+      try { SR.start(); } catch(ex) { console.warn('SR restart:', ex.message); }
+    } else {
+      setOrb('idle');
+      setStatus('Click orb or press Alt+Space to speak');
+      showTranscript(false);
+    }
+  };
+}
+
+// ── Listen controls ───────────────────────────────────────────────────────────
 function toggleListening() {
   if (isSpeaking) { stopSpeaking(); return; }
   if (isListening) stopListening();
   else startListening();
 }
 
-async function startListening() {
+function startListening() {
+  if (!SR) { setupSR(); }
+  if (!SR) { toast('Speech recognition not available'); return; }
   if (isListening) return;
   if (isSpeaking) stopSpeaking();
 
-  try {
-    const constraints = { audio: true };
-    if (config.micDeviceId) {
-      constraints.audio = { deviceId: { exact: config.micDeviceId } };
-    }
-
-    micStream = await navigator.mediaDevices.getUserMedia(constraints);
-  } catch (e) {
-    console.error('Mic access failed:', e);
-    setStatus('Mic access denied — check permissions');
-    toast('Cannot access microphone: ' + e.message);
-    return;
-  }
-
-  audioChunks = [];
-  const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-    ? 'audio/webm;codecs=opus'
-    : MediaRecorder.isTypeSupported('audio/webm')
-      ? 'audio/webm'
-      : '';
-
-  mediaRecorder = new MediaRecorder(micStream, mimeType ? { mimeType } : {});
-
-  mediaRecorder.ondataavailable = e => {
-    if (e.data && e.data.size > 0) audioChunks.push(e.data);
-  };
-
-  mediaRecorder.onstop = () => {
-    // Release mic
-    if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
-    if (audioChunks.length === 0) {
-      setOrb('idle');
-      setStatus('Click orb or press Alt+Space to speak');
-      return;
-    }
-    const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
-    audioChunks = [];
-    transcribeAudio(blob);
-  };
-
-  mediaRecorder.start(100); // collect in 100ms chunks
   isListening = true;
-  setOrb('listening');
-  setStatus('Recording… click orb again to send');
-  document.getElementById('transcript').textContent = '🎙 Recording…';
+  document.getElementById('final').textContent   = '';
+  document.getElementById('interim').textContent = '';
+  showTranscript(true);
 
-  // Safety: auto-stop after 30s
-  clearTimeout(recordingTimer);
-  recordingTimer = setTimeout(() => { if (isListening) stopListening(); }, 30000);
+  if (!srBusy) {
+    try { SR.start(); srBusy = true; }
+    catch(e) { console.warn('SR.start error:', e.message); }
+  }
 }
 
 function stopListening() {
-  clearTimeout(recordingTimer);
   isListening = false;
-  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-    mediaRecorder.stop(); // triggers onstop → transcribeAudio
-  } else {
-    if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
-    setOrb('idle');
-    setStatus('Click orb or press Alt+Space to speak');
-    document.getElementById('transcript').textContent = '';
+  showTranscript(false);
+  setOrb('idle');
+  setStatus('Click orb or press Alt+Space to speak');
+  if (SR && srBusy) {
+    try { SR.stop(); } catch {}
   }
 }
 
-async function transcribeAudio(blob) {
-  setOrb('thinking');
-  setStatus('Transcribing…');
-  document.getElementById('transcript').textContent = '✦ Processing speech…';
-
-  try {
-    const formData = new FormData();
-    // Whisper expects a file with an extension it recognises
-    formData.append('file', blob, 'audio.webm');
-    formData.append('model', 'openai/whisper-large-v3');
-
-    const resp = await fetch('https://openrouter.ai/api/v1/audio/transcriptions', {
-      method: 'POST',
-      headers: {
-        'Authorization': 'Bearer ' + config.apiKey,
-        'HTTP-Referer':  'https://nova-assistant.app',
-        'X-Title':       'Nova Voice Assistant',
-      },
-      body: formData,
-    });
-
-    if (!resp.ok) {
-      // Whisper might not be available on free tier — fallback to browser SR
-      console.warn('Whisper failed, trying browser SR fallback');
-      document.getElementById('transcript').textContent = '';
-      setOrb('idle');
-      setStatus('Transcription failed — try typing instead');
-      toast('Voice transcription failed (API error ' + resp.status + ')');
-      return;
-    }
-
-    const data = await resp.json();
-    const text = (data.text || '').trim();
-
-    if (!text) {
-      document.getElementById('transcript').textContent = '';
-      setOrb('idle');
-      setStatus('Nothing heard — try again');
-      return;
-    }
-
-    // Show what was said
-    document.getElementById('transcript').textContent = '"' + text + '"';
-    setTimeout(() => { document.getElementById('transcript').textContent = ''; }, 3000);
-
-    handleVoiceInput(text);
-
-  } catch (e) {
-    console.error('Transcription error:', e);
-    document.getElementById('transcript').textContent = '';
-    setOrb('idle');
-    setStatus('Transcription failed: ' + e.message);
+function showTranscript(on) {
+  document.getElementById('transcript').classList.toggle('active', on);
+  if (!on) {
+    document.getElementById('final').textContent   = '';
+    document.getElementById('interim').textContent = '';
   }
 }
 
-// Esc stops listening/recording
+// Esc → stop everything
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { stopListening(); stopSpeaking(); }
 });
 
-// ── Voice command parsing ─────────────────────────────────────────────
-function handleVoiceInput(text) {
+// ── Voice command parser ──────────────────────────────────────────────────────
+// App launch map — common Windows app names → commands
+const APP_COMMANDS = {
+  'vs code':        'code',
+  'vscode':         'code',
+  'visual studio code': 'code',
+  'notepad':        'notepad',
+  'notepad++':      'notepad++',
+  'chrome':         'start chrome',
+  'google chrome':  'start chrome',
+  'firefox':        'start firefox',
+  'edge':           'start msedge',
+  'calculator':     'calc',
+  'file explorer':  'explorer',
+  'explorer':       'explorer',
+  'task manager':   'taskmgr',
+  'paint':          'mspaint',
+  'word':           'start winword',
+  'excel':          'start excel',
+  'powerpoint':     'start powerpnt',
+  'cmd':            'start cmd',
+  'command prompt': 'start cmd',
+  'powershell':     'start powershell',
+  'terminal':       'start wt',
+  'spotify':        'start spotify',
+  'discord':        'start discord',
+  'slack':          'start slack',
+  'zoom':           'start zoom',
+};
+
+async function handleVoiceInput(text) {
   const lower = text.toLowerCase().trim();
-  if (/^(clear|reset|new chat)$/.test(lower)) { clearChat(); return; }
-  if (/^stop$/.test(lower)) { stopSpeaking(); return; }
-  // Otherwise send to AI
+
+  // ── Built-in commands ──
+  if (/^(clear|reset|new chat|clear chat)$/.test(lower)) {
+    clearChat();
+    return;
+  }
+  if (/^stop(speaking| talking)?$/.test(lower)) {
+    stopSpeaking();
+    return;
+  }
+
+  // ── Open app commands ──
+  const openMatch = lower.match(/^open\s+(.+)$/);
+  if (openMatch) {
+    const appName = openMatch[1].trim();
+    const cmd = APP_COMMANDS[appName];
+    if (cmd) {
+      addMessage('user', text);
+      setOrb('thinking');
+      const result = await electronAPI.exec.launch(cmd);
+      setOrb('idle');
+      if (result.ok) {
+        const reply = `Opening ${appName}!`;
+        addMessage('nova', reply);
+        speak(reply);
+      } else {
+        const reply = `Couldn't open ${appName}. Make sure it's installed.`;
+        addMessage('nova', reply);
+        speak(reply);
+      }
+      return;
+    } else {
+      // Unknown app — try launching by name anyway
+      addMessage('user', text);
+      setOrb('thinking');
+      const result = await electronAPI.exec.launch(`start ${appName}`);
+      setOrb('idle');
+      if (result.ok) {
+        const reply = `Trying to open ${appName}!`;
+        addMessage('nova', reply);
+        speak(reply);
+      } else {
+        // Fall through to AI
+        sendMessage(text, true);  // already added user msg
+      }
+      return;
+    }
+  }
+
+  // ── Everything else → AI ──
   sendMessage(text);
 }
 
-// ── Chat ──────────────────────────────────────────────────────────────
+// ── Chat ──────────────────────────────────────────────────────────────────────
 function addMessage(role, text) {
   const wrap = document.getElementById('chatWrap');
   const div  = document.createElement('div');
@@ -618,12 +705,15 @@ function clearChat() {
   toast('Conversation cleared');
 }
 
-// ── Send message ──────────────────────────────────────────────────────
-async function sendMessage(text) {
+// ── Send to AI ────────────────────────────────────────────────────────────────
+async function sendMessage(text, skipAddUser = false) {
   if (!text.trim()) return;
-  stopListening();
 
-  addMessage('user', text);
+  // Stop listening while AI thinks (restarts after response)
+  const wasListening = isListening;
+  if (isListening) stopListening();
+
+  if (!skipAddUser) addMessage('user', text);
   messages.push({ role: 'user', content: text });
 
   const typing = addTyping();
@@ -638,13 +728,13 @@ async function sendMessage(text) {
         'Content-Type':  'application/json',
         'Authorization': 'Bearer ' + config.apiKey,
         'HTTP-Referer':  'https://nova-assistant.app',
-        'X-Title':       'Nova Voice Assistant',
+        'X-Title':       'Nova',
       },
       body: JSON.stringify({
         model,
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
-          ...messages.slice(-10),        // keep last 10 for context
+          ...messages.slice(-12),
         ],
       }),
     });
@@ -653,17 +743,23 @@ async function sendMessage(text) {
     typing.remove();
 
     if (!resp.ok) {
-      const errMsg = data?.error?.message || 'API error ' + resp.status;
-      addMessage('nova', '⚠ ' + errMsg);
+      const err = data?.error?.message || 'API error ' + resp.status;
+      addMessage('nova', '⚠ ' + err);
       setOrb('idle');
-      setStatus('Error — see message above');
+      setStatus('Error — see message');
       return;
     }
 
-    const reply = data.choices?.[0]?.message?.content || '(no response)';
+    const reply = data.choices?.[0]?.message?.content?.trim() || '(no response)';
     messages.push({ role: 'assistant', content: reply });
     addMessage('nova', reply);
     speak(reply);
+
+    // Resume listening after Nova speaks (if was listening before)
+    if (wasListening) {
+      // Wait for speech to start, then let onend handle it
+      // Actually just restart when speak() finishes (handled in TTS onend)
+    }
 
   } catch(e) {
     typing.remove();
@@ -685,26 +781,39 @@ document.getElementById('textInput').addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendText(); }
 });
 
-// ── TTS ───────────────────────────────────────────────────────────────
+// ── TTS ───────────────────────────────────────────────────────────────────────
 function speak(text) {
   if (!text) return;
   stopSpeaking();
 
-  const utter = new SpeechSynthesisUtterance(text);
-  utter.rate   = 1.05;
-  utter.pitch  = 1;
-  utter.volume = 1;
+  const utter    = new SpeechSynthesisUtterance(text);
+  utter.rate     = 1.05;
+  utter.pitch    = 1;
+  utter.volume   = 1;
+  utter.lang     = 'en-US';
 
-  // Pick selected voice
   const voiceName = config.voiceName;
   if (voiceName) {
     const v = speechSynthesis.getVoices().find(v => v.name === voiceName);
     if (v) utter.voice = v;
   }
 
-  utter.onstart = () => { isSpeaking = true; setOrb('speaking'); setStatus('Speaking…'); };
-  utter.onend   = () => { isSpeaking = false; setOrb('idle'); setStatus('Click orb or press Alt+Space to speak'); };
-  utter.onerror = (e) => { console.warn('TTS error:', e); isSpeaking = false; setOrb('idle'); setStatus(''); };
+  utter.onstart = () => {
+    isSpeaking = true;
+    setOrb('speaking');
+    setStatus('Speaking… (Esc to skip)');
+  };
+  utter.onend = () => {
+    isSpeaking = false;
+    setOrb('idle');
+    setStatus('Click orb or press Alt+Space to speak');
+  };
+  utter.onerror = (e) => {
+    console.warn('TTS error:', e.error);
+    isSpeaking = false;
+    setOrb('idle');
+    setStatus('Click orb or press Alt+Space to speak');
+  };
 
   speechSynthesis.speak(utter);
 }
@@ -716,17 +825,20 @@ function stopSpeaking() {
   isSpeaking = false;
 }
 
-// ── UI helpers ────────────────────────────────────────────────────────
+// ── UI helpers ────────────────────────────────────────────────────────────────
 function setOrb(state) {
   const orb = document.getElementById('orb');
   orb.className = '';
-  if (state === 'idle')      { orb.textContent = '🎙'; }
-  if (state === 'listening') { orb.className = 'listening'; orb.textContent = '👂'; }
-  if (state === 'thinking')  { orb.className = 'thinking';  orb.textContent = '🤔'; }
-  if (state === 'speaking')  { orb.className = 'speaking';  orb.textContent = '🔊'; }
+  orb.textContent = state === 'listening' ? '👂'
+                  : state === 'thinking'  ? '🤔'
+                  : state === 'speaking'  ? '🔊'
+                  : '🎙';
+  if (state !== 'idle') orb.className = state;
 }
 
-function setStatus(txt) { document.getElementById('statusTxt').textContent = txt; }
+function setStatus(txt) {
+  document.getElementById('statusTxt').textContent = txt;
+}
 
 let toastTimer;
 function toast(msg) {
@@ -737,35 +849,21 @@ function toast(msg) {
   toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
 }
 
-// ── Tabs ──────────────────────────────────────────────────────────────
+// ── Tabs ──────────────────────────────────────────────────────────────────────
 function switchTab(tab) {
-  const chatView  = document.getElementById('chatView');
-  const settPanel = document.getElementById('settingsPanel');
-  const navChat   = document.getElementById('navChat');
-  const navSett   = document.getElementById('navSettings');
-
-  if (tab === 'chat') {
-    chatView.style.display  = 'flex';
-    settPanel.style.display = 'none';
-    navChat.classList.add('active');
-    navSett.classList.remove('active');
-  } else {
-    chatView.style.display  = 'none';
-    settPanel.style.display = 'flex';
-    navChat.classList.remove('active');
-    navSett.classList.add('active');
-  }
+  const isChat = tab === 'chat';
+  document.getElementById('chatView').style.display      = isChat ? 'flex'  : 'none';
+  document.getElementById('settingsPanel').style.display = isChat ? 'none'  : 'flex';
+  document.getElementById('navChat').classList.toggle('active', isChat);
+  document.getElementById('navSettings').classList.toggle('active', !isChat);
 }
 
-// Settings button in titlebar also toggles
 document.getElementById('btnSettings').onclick = () => {
-  const isChat = document.getElementById('chatView').style.display !== 'none';
-  switchTab(isChat ? 'settings' : 'chat');
-  document.getElementById('navSettings').classList.toggle('active', !isChat);
-  document.getElementById('navChat').classList.toggle('active', isChat);
+  const inChat = document.getElementById('chatView').style.display !== 'none';
+  switchTab(inChat ? 'settings' : 'chat');
 };
 
-// ── Launch ────────────────────────────────────────────────────────────
+// ── Launch ────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', boot);
 </script>
 </body>
