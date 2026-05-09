@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Nova</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: rgba(255,255,255,0.04);
+    --border: rgba(255,255,255,0.08);
+    --accent: #7c6aff;
+    --accent2: #a78bfa;
+    --text: #f0f0f5;
+    --muted: #888899;
+    --danger: #ff4d4d;
+    --success: #4dff91;
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: transparent;
+    overflow: hidden;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    color: var(--text);
+    -webkit-app-region: drag;
+    user-select: none;
+  }
+
+  #app {
+    width: 480px; height: 680px;
+    background: linear-gradient(145deg, #0d0d1a 0%, #0a0a12 100%);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: 0 32px 80px rgba(0,0,0,0.8), 0 0 0 1px rgba(124,106,255,0.1);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* glow bg */
+  #app::before {
+    content: '';
+    position: absolute;
+    top: -80px; left: 50%; transform: translateX(-50%);
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(124,106,255,0.12) 0%, transparent 70%);
+    pointer-events: none;
+    transition: opacity 0.5s;
+  }
+  #app.listening::before {
+    background: radial-gradient(circle, rgba(77,255,145,0.15) 0%, transparent 70%);
+  }
+
+  /* Titlebar */
+  .titlebar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px 12px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .title {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; font-weight: 600; letter-spacing: 0.05em;
+    color: var(--accent2);
+  }
+  .title svg { opacity: 0.9; }
+  .win-controls {
+    display: flex; gap: 6px;
+    -webkit-app-region: no-drag;
+  }
+  .win-btn {
+    width: 26px; height: 26px; border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+    transition: all 0.15s;
+  }
+  .win-btn:hover { background: rgba(255,255,255,0.1); color: var(--text); }
+  .win-btn.close:hover { background: rgba(255,77,77,0.15); color: var(--danger); border-color: rgba(255,77,77,0.3); }
+
+  /* Status */
+  .status-bar {
+    padding: 8px 18px;
+    display: flex; align-items: center; gap: 8px;
+    flex-shrink: 0;
+  }
+  .status-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--muted);
+    transition: background 0.3s;
+    flex-shrink: 0;
+  }
+  .status-dot.listening { background: var(--success); box-shadow: 0 0 8px var(--success); animation: pulse 1.2s infinite; }
+  .status-dot.thinking { background: var(--accent); box-shadow: 0 0 8px var(--accent); animation: pulse 0.8s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .status-text { font-size: 11px; color: var(--muted); }
+
+  /* Chat area */
+  .chat {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 18px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    scroll-behavior: smooth;
+  }
+  .chat::-webkit-scrollbar { width: 4px; }
+  .chat::-webkit-scrollbar-track { background: transparent; }
+  .chat::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+  .msg {
+    max-width: 88%;
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 13px;
+    line-height: 1.55;
+    animation: fadeUp 0.25s ease;
+  }
+  @keyframes fadeUp { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: none; } }
+
+  .msg.user {
+    align-self: flex-end;
+    background: linear-gradient(135deg, #5b4fe8, #7c6aff);
+    color: #fff;
+    border-bottom-right-radius: 4px;
+  }
+  .msg.assistant {
+    align-self: flex-start;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-bottom-left-radius: 4px;
+  }
+  .msg.error {
+    align-self: flex-start;
+    background: rgba(255,77,77,0.08);
+    border: 1px solid rgba(255,77,77,0.2);
+    color: #ff9999;
+    border-bottom-left-radius: 4px;
+    font-size: 12px;
+  }
+  .msg.system {
+    align-self: center;
+    background: transparent;
+    color: var(--muted);
+    font-size: 11px;
+    padding: 4px 10px;
+  }
+
+  /* Thinking dots */
+  .thinking-dots { display: flex; gap: 4px; align-items: center; padding: 2px 0; }
+  .thinking-dots span {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--accent2); opacity: 0.5;
+    animation: blink 1.2s infinite;
+  }
+  .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes blink { 0%,100% { opacity:0.2; transform: scale(0.8); } 50% { opacity:1; transform: scale(1.1); } }
+
+  /* Orb */
+  .orb-wrap {
+    display: flex; justify-content: center; align-items: center;
+    padding: 10px 0 14px;
+    flex-shrink: 0;
+  }
+  .orb {
+    width: 72px; height: 72px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #9d8fff, #5b4fe8 60%, #3a2ea0);
+    box-shadow: 0 0 0 8px rgba(124,106,255,0.08), 0 8px 32px rgba(91,79,232,0.4);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.25s;
+    position: relative;
+    -webkit-app-region: no-drag;
+  }
+  .orb:hover { transform: scale(1.06); box-shadow: 0 0 0 12px rgba(124,106,255,0.12), 0 12px 40px rgba(91,79,232,0.5); }
+  .orb.listening {
+    background: radial-gradient(circle at 35% 35%, #6affb8, #22c55e 60%, #15803d);
+    box-shadow: 0 0 0 8px rgba(77,255,145,0.1), 0 8px 32px rgba(34,197,94,0.5);
+    animation: orbPulse 1.2s infinite;
+  }
+  .orb.thinking {
+    background: radial-gradient(circle at 35% 35%, #c4b5fd, #7c6aff 60%, #4c3adf);
+    animation: orbSpin 2s linear infinite;
+  }
+  @keyframes orbPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+  @keyframes orbSpin { from { filter: hue-rotate(0deg); } to { filter: hue-rotate(360deg); } }
+
+  .orb svg { opacity: 0.95; pointer-events: none; }
+
+  /* Ripple rings */
+  .orb-ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 2px solid rgba(124,106,255,0.4);
+    animation: ringExpand 2s infinite;
+    pointer-events: none;
+  }
+  .orb-ring:nth-child(2) { animation-delay: 0.6s; }
+  .orb-ring:nth-child(3) { animation-delay: 1.2s; }
+  @keyframes ringExpand {
+    0% { width: 72px; height: 72px; opacity: 0.8; }
+    100% { width: 130px; height: 130px; opacity: 0; }
+  }
+  .listening .orb-ring { border-color: rgba(77,255,145,0.5); }
+
+  /* Input area */
+  .input-area {
+    padding: 10px 18px 16px;
+    flex-shrink: 0;
+    border-top: 1px solid var(--border);
+  }
+  .input-row {
+    display: flex; gap: 8px; align-items: flex-end;
+  }
+  .input-wrap {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    display: flex; align-items: center;
+    padding: 2px 4px 2px 12px;
+    transition: border-color 0.2s;
+  }
+  .input-wrap:focus-within { border-color: rgba(124,106,255,0.4); }
+  textarea {
+    flex: 1; background: transparent; border: none; outline: none;
+    color: var(--text); font-size: 13px; font-family: inherit;
+    resize: none; min-height: 36px; max-height: 90px;
+    padding: 8px 4px 8px 0;
+    line-height: 1.4;
+    -webkit-app-region: no-drag;
+  }
+  textarea::placeholder { color: var(--muted); }
+  .send-btn {
+    width: 36px; height: 36px; border-radius: 8px; flex-shrink: 0;
+    background: linear-gradient(135deg, #5b4fe8, #7c6aff);
+    border: none; cursor: pointer; color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+    -webkit-app-region: no-drag;
+  }
+  .send-btn:hover { transform: scale(1.05); opacity: 0.9; }
+  .send-btn:disabled { opacity: 0.3; cursor: default; transform: none; }
+
+  /* API key setup */
+  .setup-overlay {
+    position: absolute; inset: 0; z-index: 10;
+    background: linear-gradient(145deg, #0d0d1a 0%, #0a0a12 100%);
+    border-radius: 16px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 20px; padding: 40px 32px;
+  }
+  .setup-overlay.hidden { display: none; }
+  .setup-icon { font-size: 40px; }
+  .setup-title { font-size: 20px; font-weight: 700; color: var(--text); text-align: center; }
+  .setup-sub { font-size: 12px; color: var(--muted); text-align: center; line-height: 1.6; }
+  .setup-input {
+    width: 100%; padding: 10px 14px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; color: var(--text); font-size: 13px;
+    outline: none; font-family: inherit;
+    -webkit-app-region: no-drag;
+  }
+  .setup-input:focus { border-color: rgba(124,106,255,0.5); }
+  .setup-btn {
+    width: 100%; padding: 12px;
+    background: linear-gradient(135deg, #5b4fe8, #7c6aff);
+    border: none; border-radius: 10px; color: #fff;
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    -webkit-app-region: no-drag;
+    transition: opacity 0.15s;
+  }
+  .setup-btn:hover { opacity: 0.9; }
+  .setup-hint { font-size: 11px; color: var(--muted); }
+  .setup-hint a { color: var(--accent2); text-decoration: none; cursor: pointer; }
+
+  /* Settings gear */
+  .gear-btn {
+    width: 26px; height: 26px; border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    cursor: pointer; font-size: 13px;
+    display: flex; align-items: center; justify-content: center;
+    -webkit-app-region: no-drag;
+    transition: all 0.15s;
+  }
+  .gear-btn:hover { background: rgba(255,255,255,0.1); color: var(--text); }
+
+  .hint { font-size: 10px; color: var(--muted); text-align: center; padding: 4px 0 2px; opacity: 0.6; }
+
+  /* Voice indicator bar */
+  .voice-bars {
+    display: flex; align-items: flex-end; gap: 3px; height: 18px;
+    visibility: hidden;
+  }
+  .voice-bars.active { visibility: visible; }
+  .voice-bar {
+    width: 3px; border-radius: 2px;
+    background: var(--success);
+    animation: voiceBar 0.6s ease-in-out infinite alternate;
+  }
+  .voice-bar:nth-child(1) { height: 4px; animation-delay: 0s; }
+  .voice-bar:nth-child(2) { height: 10px; animation-delay: 0.1s; }
+  .voice-bar:nth-child(3) { height: 16px; animation-delay: 0.2s; }
+  .voice-bar:nth-child(4) { height: 8px; animation-delay: 0.15s; }
+  .voice-bar:nth-child(5) { height: 4px; animation-delay: 0.05s; }
+  @keyframes voiceBar { from { height: 4px; } to { height: 18px; } }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <!-- API key setup overlay -->
+  <div class="setup-overlay" id="setupOverlay">
+    <div class="setup-icon">🤖</div>
+    <div class="setup-title">Set up Nova</div>
+    <div class="setup-sub">Nova uses OpenAI to power conversations.<br/>Enter your API key to get started.</div>
+    <input class="setup-input" type="password" id="apiKeyInput" placeholder="sk-..." autocomplete="off" />
+    <button class="setup-btn" id="setupBtn">Start Nova →</button>
+    <div class="setup-hint">Your key is stored locally only. <a onclick="openKeyLink()">Get a key →</a></div>
+  </div>
+
+  <!-- Titlebar -->
+  <div class="titlebar">
+    <div class="title">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="8" r="7" fill="url(#g1)"/>
+        <defs><radialGradient id="g1" cx="35%" cy="35%"><stop offset="0%" stop-color="#c4b5fd"/><stop offset="100%" stop-color="#5b4fe8"/></radialGradient></defs>
+      </svg>
+      Nova
+    </div>
+    <div style="display:flex;gap:6px;align-items:center;">
+      <button class="gear-btn" id="settingsBtn" title="Settings">⚙</button>
+      <div class="win-controls">
+        <button class="win-btn" id="minBtn" title="Minimize">—</button>
+        <button class="win-btn close" id="closeBtn" title="Close">✕</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status bar -->
+  <div class="status-bar">
+    <div class="status-dot" id="statusDot"></div>
+    <div class="status-text" id="statusText">Ready — press orb or Alt+Space</div>
+    <div class="voice-bars" id="voiceBars">
+      <div class="voice-bar"></div>
+      <div class="voice-bar"></div>
+      <div class="voice-bar"></div>
+      <div class="voice-bar"></div>
+      <div class="voice-bar"></div>
+    </div>
+  </div>
+
+  <!-- Chat -->
+  <div class="chat" id="chat"></div>
+
+  <!-- Orb -->
+  <div class="orb-wrap">
+    <div class="orb" id="orb" title="Click to speak (Alt+Space)">
+      <div class="orb-ring"></div>
+      <div class="orb-ring"></div>
+      <div class="orb-ring"></div>
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round">
+        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+        <line x1="12" y1="19" x2="12" y2="23"/>
+        <line x1="8" y1="23" x2="16" y2="23"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Text input -->
+  <div class="input-area">
+    <div class="input-row">
+      <div class="input-wrap">
+        <textarea id="textInput" rows="1" placeholder="Type a message..."></textarea>
+      </div>
+      <button class="send-btn" id="sendBtn" title="Send">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
+      </button>
+    </div>
+    <div class="hint" id="hintText">🎤 Click orb to speak • Alt+Space shortcut</div>
+  </div>
+</div>
+
+<script>
+// ─── State ────────────────────────────────────────────────────────────────────
+let apiKey = localStorage.getItem('nova_api_key') || '';
+let messages = []; // conversation history
+let isListening = false;
+let isThinking = false;
+let recognition = null;
+let synth = window.speechSynthesis;
+
+const SYSTEM_PROMPT = `You are Nova, a smart and friendly Windows voice assistant. 
+Be concise — voice responses should be 1-3 sentences unless more detail is needed. 
+You can help with: answering questions, calculations, writing, ideas, explanations, and general tasks.
+Respond naturally and conversationally.`;
+
+// ─── Elements ────────────────────────────────────────────────────────────────
+const app = document.getElementById('app');
+const setupOverlay = document.getElementById('setupOverlay');
+const apiKeyInput = document.getElementById('apiKeyInput');
+const setupBtn = document.getElementById('setupBtn');
+const chat = document.getElementById('chat');
+const orb = document.getElementById('orb');
+const statusDot = document.getElementById('statusDot');
+const statusText = document.getElementById('statusText');
+const voiceBars = document.getElementById('voiceBars');
+const textInput = document.getElementById('textInput');
+const sendBtn = document.getElementById('sendBtn');
+const settingsBtn = document.getElementById('settingsBtn');
+const hintText = document.getElementById('hintText');
+
+// ─── Init ────────────────────────────────────────────────────────────────────
+if (apiKey) {
+  setupOverlay.classList.add('hidden');
+  greet();
+} 
+
+// ─── Setup ────────────────────────────────────────────────────────────────────
+setupBtn.onclick = () => {
+  const key = apiKeyInput.value.trim();
+  if (!key.startsWith('sk-')) {
+    apiKeyInput.style.borderColor = 'rgba(255,77,77,0.5)';
+    return;
+  }
+  apiKey = key;
+  localStorage.setItem('nova_api_key', key);
+  setupOverlay.classList.add('hidden');
+  greet();
+};
+apiKeyInput.onkeydown = e => { if (e.key === 'Enter') setupBtn.click(); };
+
+function openKeyLink() {
+  if (window.electronAPI) {
+    // can't open external from renderer without IPC, just show hint
+  }
+  window.open('https://platform.openai.com/api-keys', '_blank');
+}
+
+settingsBtn.onclick = () => {
+  apiKey = '';
+  localStorage.removeItem('nova_api_key');
+  messages = [];
+  chat.innerHTML = '';
+  setupOverlay.classList.remove('hidden');
+  apiKeyInput.value = '';
+};
+
+// ─── Window controls ──────────────────────────────────────────────────────────
+document.getElementById('closeBtn').onclick = () => {
+  if (window.electronAPI) window.electronAPI.closeWindow();
+};
+document.getElementById('minBtn').onclick = () => {
+  if (window.electronAPI) window.electronAPI.minimizeWindow();
+};
+
+// ─── Greeting ─────────────────────────────────────────────────────────────────
+function greet() {
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  addMsg('assistant', `${greeting}! I'm Nova, your voice assistant. Click the orb or press **Alt+Space** to talk, or type below.`);
+  setStatus('ready', 'Ready — press orb or Alt+Space');
+}
+
+// ─── Status ───────────────────────────────────────────────────────────────────
+function setStatus(state, text) {
+  statusDot.className = 'status-dot' + (state !== 'ready' ? ' ' + state : '');
+  statusText.textContent = text;
+  orb.className = 'orb' + (state === 'listening' ? ' listening' : state === 'thinking' ? ' thinking' : '');
+  app.className = state === 'listening' ? 'listening' : '';
+  voiceBars.className = 'voice-bars' + (state === 'listening' ? ' active' : '');
+}
+
+// ─── Chat ────────────────────────────────────────────────────────────────────
+function addMsg(role, text) {
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+  // bold markdown
+  div.innerHTML = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+  return div;
+}
+
+function addThinking() {
+  const div = document.createElement('div');
+  div.className = 'msg assistant';
+  div.id = 'thinkingBubble';
+  div.innerHTML = '<div class="thinking-dots"><span></span><span></span><span></span></div>';
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+  return div;
+}
+
+function removeThinking() {
+  const el = document.getElementById('thinkingBubble');
+  if (el) el.remove();
+}
+
+// ─── Speech Recognition ───────────────────────────────────────────────────────
+function startListening() {
+  if (isListening || isThinking) { stopListening(); return; }
+  if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+    addMsg('error', 'Speech recognition not supported. Use text input below.');
+    return;
+  }
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SpeechRecognition();
+  recognition.continuous = false;
+  recognition.interimResults = true;
+  recognition.lang = 'en-US';
+  recognition.maxAlternatives = 1;
+
+  isListening = true;
+  setStatus('listening', 'Listening...');
+  hintText.textContent = '🔴 Recording — click orb to stop';
+
+  let finalTranscript = '';
+
+  recognition.onresult = (e) => {
+    let interim = '';
+    finalTranscript = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) finalTranscript += e.results[i][0].transcript;
+      else interim += e.results[i][0].transcript;
+    }
+    statusText.textContent = finalTranscript || interim || 'Listening...';
+  };
+
+  recognition.onend = () => {
+    isListening = false;
+    if (finalTranscript.trim()) {
+      sendMessage(finalTranscript.trim());
+    } else {
+      setStatus('ready', 'Ready — press orb or Alt+Space');
+      hintText.textContent = '🎤 Click orb to speak • Alt+Space shortcut';
+    }
+  };
+
+  recognition.onerror = (e) => {
+    isListening = false;
+    setStatus('ready', 'Ready');
+    hintText.textContent = '🎤 Click orb to speak • Alt+Space shortcut';
+    if (e.error !== 'no-speech') {
+      addMsg('error', `Mic error: ${e.error}. Check microphone permissions.`);
+    }
+  };
+
+  recognition.start();
+}
+
+function stopListening() {
+  if (recognition) { recognition.stop(); recognition = null; }
+  isListening = false;
+}
+
+orb.onclick = startListening;
+
+// ─── Send message ─────────────────────────────────────────────────────────────
+async function sendMessage(text) {
+  if (!text.trim() || isThinking) return;
+  if (!apiKey) { setupOverlay.classList.remove('hidden'); return; }
+
+  stopListening();
+  addMsg('user', text);
+  messages.push({ role: 'user', content: text });
+
+  isThinking = true;
+  setStatus('thinking', 'Thinking...');
+  hintText.textContent = '⏳ Nova is thinking...';
+  addThinking();
+
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          ...messages.slice(-12), // keep last 12 turns for context
+        ],
+        max_tokens: 400,
+        temperature: 0.7,
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err?.error?.message || `API error ${res.status}`);
+    }
+
+    const data = await res.json();
+    const reply = data.choices[0].message.content.trim();
+
+    messages.push({ role: 'assistant', content: reply });
+    removeThinking();
+    addMsg('assistant', reply);
+    speak(reply);
+
+    setStatus('ready', 'Ready — press orb or Alt+Space');
+    hintText.textContent = '🎤 Click orb to speak • Alt+Space shortcut';
+  } catch (err) {
+    removeThinking();
+    addMsg('error', `Error: ${err.message}`);
+    setStatus('ready', 'Ready');
+    hintText.textContent = '🎤 Click orb to speak • Alt+Space shortcut';
+  }
+
+  isThinking = false;
+}
+
+// ─── Text input ───────────────────────────────────────────────────────────────
+textInput.addEventListener('input', () => {
+  textInput.style.height = 'auto';
+  textInput.style.height = Math.min(textInput.scrollHeight, 90) + 'px';
+});
+
+textInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    const val = textInput.value.trim();
+    if (val) { textInput.value = ''; textInput.style.height = 'auto'; sendMessage(val); }
+  }
+});
+
+sendBtn.onclick = () => {
+  const val = textInput.value.trim();
+  if (val) { textInput.value = ''; textInput.style.height = 'auto'; sendMessage(val); }
+};
+
+// ─── TTS ──────────────────────────────────────────────────────────────────────
+function speak(text) {
+  if (!synth) return;
+  synth.cancel();
+  // strip markdown for speech
+  const clean = text.replace(/\*\*(.*?)\*\*/g, '$1').replace(/\*(.*?)\*/g, '$1');
+  const utt = new SpeechSynthesisUtterance(clean);
+  utt.rate = 1.05; utt.pitch = 1.0; utt.volume = 1.0;
+  // prefer a natural voice
+  const voices = synth.getVoices();
+  const preferred = voices.find(v => v.name.includes('Zira') || v.name.includes('David') || v.name.includes('Natural') || v.lang === 'en-US');
+  if (preferred) utt.voice = preferred;
+  synth.speak(utt);
+}
+
+// load voices async
+if (synth) synth.onvoiceschanged = () => {};
+</script>
+</body>
+</html>
