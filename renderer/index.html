@@ -1,787 +1,710 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Nova</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+  *{box-sizing:border-box;margin:0;padding:0}
 
-  :root {
-    --bg: #0a0a0f;
-    --surface: rgba(255,255,255,0.04);
-    --border: rgba(255,255,255,0.08);
-    --accent: #7c6aff;
+  :root{
+    --bg:      #0d0d1a;
+    --surface: #13132a;
+    --card:    #1a1a35;
+    --border:  #2a2a4a;
+    --accent:  #7c6fff;
     --accent2: #a78bfa;
-    --text: #f0f0f5;
-    --muted: #888899;
-    --danger: #ff4d4d;
-    --success: #4dff91;
+    --text:    #e8e8f0;
+    --muted:   #8888aa;
+    --danger:  #ef4444;
+    --green:   #22c55e;
   }
 
-  html, body {
-    width: 100%; height: 100%;
-    background: transparent;
-    overflow: hidden;
-    font-family: 'Segoe UI', system-ui, sans-serif;
-    color: var(--text);
-    -webkit-app-region: drag;
-    user-select: none;
+  html,body{
+    width:480px;height:700px;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Segoe UI',system-ui,sans-serif;
+    font-size:14px;
+    overflow:hidden;
+    user-select:none;
   }
 
-  #app {
-    width: 480px; height: 680px;
-    background: linear-gradient(145deg, #0d0d1a 0%, #0a0a12 100%);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    box-shadow: 0 32px 80px rgba(0,0,0,0.8), 0 0 0 1px rgba(124,106,255,0.1);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    position: relative;
+  /* ── Titlebar ── */
+  #titlebar{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:10px 14px;
+    background:var(--surface);
+    border-bottom:1px solid var(--border);
+    -webkit-app-region:drag;
+  }
+  #titlebar .logo{display:flex;align-items:center;gap:8px;font-weight:600;font-size:15px}
+  #titlebar .logo span{background:linear-gradient(135deg,var(--accent),var(--accent2));
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent}
+  .orb-small{width:22px;height:22px;border-radius:50%;
+    background:radial-gradient(circle at 35% 35%,var(--accent2),var(--accent));
+    box-shadow:0 0 8px var(--accent)}
+  #titlebar .controls{display:flex;gap:6px;-webkit-app-region:no-drag}
+  .tbtn{width:28px;height:28px;border:none;border-radius:6px;
+    background:transparent;color:var(--muted);cursor:pointer;
+    font-size:16px;display:flex;align-items:center;justify-content:center;
+    transition:background .15s,color .15s}
+  .tbtn:hover{background:var(--card);color:var(--text)}
+  .tbtn.close:hover{background:#ef444433;color:var(--danger)}
+
+  /* ── Setup overlay ── */
+  #setup{
+    position:fixed;inset:0;z-index:100;
+    background:var(--bg);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:20px;padding:32px;
+  }
+  #setup h2{font-size:22px;font-weight:700;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent}
+  #setup p{color:var(--muted);text-align:center;font-size:13px;line-height:1.6}
+  #setup input{
+    width:100%;padding:12px 14px;border-radius:10px;
+    border:1px solid var(--border);background:var(--card);
+    color:var(--text);font-size:14px;outline:none;
+    transition:border .2s}
+  #setup input:focus{border-color:var(--accent)}
+  #setup .hint{color:var(--muted);font-size:12px;text-align:center}
+  #setup .hint a{color:var(--accent2);cursor:pointer}
+
+  /* ── Main layout ── */
+  #main{display:flex;flex-direction:column;height:700px}
+
+  /* ── Content tabs ── */
+  #content{flex:1;display:flex;flex-direction:column;overflow:hidden}
+
+  /* ── Chat area ── */
+  #chatWrap{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+  #chatWrap::-webkit-scrollbar{width:4px}
+  #chatWrap::-webkit-scrollbar-track{background:transparent}
+  #chatWrap::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+  .msg{max-width:88%;padding:10px 13px;border-radius:12px;line-height:1.55;font-size:13.5px;word-break:break-word}
+  .msg.user{align-self:flex-end;background:var(--accent);color:#fff;border-bottom-right-radius:3px}
+  .msg.nova{align-self:flex-start;background:var(--card);color:var(--text);border-bottom-left-radius:3px;
+    border:1px solid var(--border)}
+  .msg.system{align-self:center;background:transparent;color:var(--muted);font-size:12px;font-style:italic}
+
+  /* ── Orb ── */
+  #orbWrap{display:flex;flex-direction:column;align-items:center;gap:10px;padding:14px 0 8px}
+  #orb{
+    width:72px;height:72px;border-radius:50%;cursor:pointer;
+    background:radial-gradient(circle at 35% 35%,var(--accent2),var(--accent) 60%,#4c35c4);
+    box-shadow:0 0 20px var(--accent)44,0 0 40px var(--accent)22;
+    transition:transform .2s,box-shadow .2s;
+    display:flex;align-items:center;justify-content:center;
+    font-size:26px;
+  }
+  #orb:hover{transform:scale(1.07);box-shadow:0 0 28px var(--accent)66,0 0 50px var(--accent)33}
+  #orb.listening{animation:orbPulse 1s ease-in-out infinite}
+  #orb.thinking{animation:orbSpin 1.5s linear infinite}
+  #orb.speaking{animation:orbGlow 0.8s ease-in-out infinite alternate}
+  @keyframes orbPulse{0%,100%{box-shadow:0 0 20px var(--accent)66,0 0 40px var(--accent)33}
+    50%{box-shadow:0 0 35px var(--accent)99,0 0 60px var(--accent)55}}
+  @keyframes orbSpin{from{filter:hue-rotate(0deg)}to{filter:hue-rotate(360deg)}}
+  @keyframes orbGlow{from{box-shadow:0 0 20px var(--accent2)55}to{box-shadow:0 0 40px var(--accent2)cc}}
+
+  #statusTxt{color:var(--muted);font-size:12px;letter-spacing:.5px}
+  #transcript{
+    min-height:36px;max-height:60px;overflow:hidden;
+    color:var(--accent2);font-size:13px;font-style:italic;
+    text-align:center;padding:0 20px;line-height:1.4;
+    transition:opacity .3s;
   }
 
-  #app::before {
-    content: '';
-    position: absolute;
-    top: -80px; left: 50%; transform: translateX(-50%);
-    width: 300px; height: 300px;
-    background: radial-gradient(circle, rgba(124,106,255,0.12) 0%, transparent 70%);
-    pointer-events: none;
-    transition: opacity 0.5s;
+  /* ── Input bar ── */
+  #inputBar{
+    display:flex;align-items:center;gap:8px;
+    padding:10px 12px;background:var(--surface);
+    border-top:1px solid var(--border);
   }
-  #app.listening::before {
-    background: radial-gradient(circle, rgba(77,255,145,0.15) 0%, transparent 70%);
+  #textInput{
+    flex:1;padding:9px 12px;border-radius:8px;
+    border:1px solid var(--border);background:var(--card);
+    color:var(--text);font-size:13px;outline:none;resize:none;
+    transition:border .2s;
   }
+  #textInput:focus{border-color:var(--accent)}
+  #sendBtn{
+    width:36px;height:36px;border-radius:8px;border:none;
+    background:var(--accent);color:#fff;cursor:pointer;
+    font-size:17px;display:flex;align-items:center;justify-content:center;
+    transition:background .15s;flex-shrink:0;
+  }
+  #sendBtn:hover{background:var(--accent2)}
 
-  /* Titlebar */
-  .titlebar {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 14px 18px 12px;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
+  /* ── Settings panel ── */
+  #settingsPanel{
+    display:none;flex-direction:column;
+    height:100%;overflow-y:auto;padding:16px;gap:14px;
   }
-  .title {
-    display: flex; align-items: center; gap: 8px;
-    font-size: 13px; font-weight: 600; letter-spacing: 0.05em;
-    color: var(--accent2);
+  #settingsPanel::-webkit-scrollbar{width:4px}
+  #settingsPanel::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+  #settingsPanel h3{font-size:15px;font-weight:600;color:var(--accent2);margin-bottom:2px}
+  .sSection{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px}
+  .sRow{display:flex;flex-direction:column;gap:4px}
+  .sLabel{font-size:12px;color:var(--muted);font-weight:500;letter-spacing:.3px}
+  .sSelect{
+    padding:8px 10px;border-radius:7px;border:1px solid var(--border);
+    background:var(--surface);color:var(--text);font-size:13px;outline:none;cursor:pointer;
   }
-  .win-controls { display: flex; gap: 6px; -webkit-app-region: no-drag; }
-  .win-btn {
-    width: 26px; height: 26px; border-radius: 6px;
-    border: 1px solid var(--border);
-    background: var(--surface); color: var(--muted);
-    cursor: pointer; display: flex; align-items: center; justify-content: center;
-    font-size: 11px; transition: all 0.15s;
-  }
-  .win-btn:hover { background: rgba(255,255,255,0.1); color: var(--text); }
-  .win-btn.close:hover { background: rgba(255,77,77,0.15); color: var(--danger); border-color: rgba(255,77,77,0.3); }
+  .sSelect:focus{border-color:var(--accent)}
 
-  /* Status */
-  .status-bar {
-    padding: 8px 18px;
-    display: flex; align-items: center; gap: 8px;
-    flex-shrink: 0;
-  }
-  .status-dot {
-    width: 7px; height: 7px; border-radius: 50%;
-    background: var(--muted); transition: background 0.3s; flex-shrink: 0;
-  }
-  .status-dot.listening { background: var(--success); box-shadow: 0 0 8px var(--success); animation: pulse 1.2s infinite; }
-  .status-dot.thinking { background: var(--accent); box-shadow: 0 0 8px var(--accent); animation: pulse 0.8s infinite; }
-  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
-  .status-text { font-size: 11px; color: var(--muted); flex: 1; }
+  /* Commands table */
+  .cmdTable{width:100%;border-collapse:collapse;font-size:12.5px}
+  .cmdTable td{padding:5px 4px;color:var(--muted);vertical-align:top}
+  .cmdTable td:first-child{color:var(--accent2);font-weight:500;white-space:nowrap;padding-right:10px;width:44%}
+  .cmdTable tr:not(:last-child) td{border-bottom:1px solid var(--border)33}
 
-  .voice-bars {
-    display: flex; align-items: flex-end; gap: 3px; height: 18px; visibility: hidden;
+  /* ── Bottom nav ── */
+  #nav{
+    display:flex;border-top:1px solid var(--border);
+    background:var(--surface);
   }
-  .voice-bars.active { visibility: visible; }
-  .voice-bar {
-    width: 3px; border-radius: 2px; background: var(--success);
-    animation: voiceBar 0.6s ease-in-out infinite alternate;
+  .navBtn{
+    flex:1;padding:10px 0;border:none;background:transparent;
+    color:var(--muted);cursor:pointer;font-size:19px;
+    transition:color .15s,background .15s;
   }
-  .voice-bar:nth-child(1) { height: 4px; animation-delay: 0s; }
-  .voice-bar:nth-child(2) { height: 10px; animation-delay: 0.1s; }
-  .voice-bar:nth-child(3) { height: 16px; animation-delay: 0.2s; }
-  .voice-bar:nth-child(4) { height: 8px; animation-delay: 0.15s; }
-  .voice-bar:nth-child(5) { height: 4px; animation-delay: 0.05s; }
-  @keyframes voiceBar { from { height: 4px; } to { height: 18px; } }
+  .navBtn.active{color:var(--accent);background:var(--accent)11}
+  .navBtn:hover{color:var(--text)}
 
-  /* Chat */
-  .chat {
-    flex: 1; overflow-y: auto;
-    padding: 8px 18px 12px;
-    display: flex; flex-direction: column; gap: 10px;
-    scroll-behavior: smooth;
+  /* ── Buttons ── */
+  .btn{
+    padding:11px 20px;border-radius:9px;border:none;cursor:pointer;
+    font-size:14px;font-weight:600;transition:opacity .15s;
   }
-  .chat::-webkit-scrollbar { width: 4px; }
-  .chat::-webkit-scrollbar-track { background: transparent; }
-  .chat::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+  .btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
+  .btn-primary:hover{opacity:.88}
 
-  .msg {
-    max-width: 88%; padding: 10px 14px; border-radius: 12px;
-    font-size: 13px; line-height: 1.55;
-    animation: fadeUp 0.25s ease;
+  /* ── Toast ── */
+  #toast{
+    position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
+    background:var(--card);border:1px solid var(--border);
+    padding:8px 16px;border-radius:8px;font-size:12.5px;color:var(--text);
+    opacity:0;transition:opacity .3s;pointer-events:none;z-index:200;
+    white-space:nowrap;
   }
-  @keyframes fadeUp { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: none; } }
-  .msg.user { align-self: flex-end; background: linear-gradient(135deg,#5b4fe8,#7c6aff); color:#fff; border-bottom-right-radius:4px; }
-  .msg.assistant { align-self: flex-start; background: var(--surface); border: 1px solid var(--border); color: var(--text); border-bottom-left-radius:4px; }
-  .msg.error { align-self: flex-start; background: rgba(255,77,77,0.08); border: 1px solid rgba(255,77,77,0.2); color: #ff9999; border-bottom-left-radius:4px; font-size:12px; }
-  .msg.system { align-self: center; background: transparent; color: var(--muted); font-size: 11px; padding: 4px 10px; }
+  #toast.show{opacity:1}
 
-  .thinking-dots { display: flex; gap: 4px; align-items: center; padding: 2px 0; }
-  .thinking-dots span { width:5px; height:5px; border-radius:50%; background: var(--accent2); opacity:0.5; animation: blink 1.2s infinite; }
-  .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
-  .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
-  @keyframes blink { 0%,100% { opacity:0.2; transform:scale(0.8); } 50% { opacity:1; transform:scale(1.1); } }
-
-  /* Orb */
-  .orb-wrap { display:flex; justify-content:center; align-items:center; padding:10px 0 14px; flex-shrink:0; }
-  .orb {
-    width:72px; height:72px; border-radius:50%;
-    background: radial-gradient(circle at 35% 35%, #9d8fff, #5b4fe8 60%, #3a2ea0);
-    box-shadow: 0 0 0 8px rgba(124,106,255,0.08), 0 8px 32px rgba(91,79,232,0.4);
-    cursor:pointer; display:flex; align-items:center; justify-content:center;
-    transition: all 0.25s; position:relative;
-    -webkit-app-region: no-drag;
-  }
-  .orb:hover { transform: scale(1.06); box-shadow: 0 0 0 12px rgba(124,106,255,0.12), 0 12px 40px rgba(91,79,232,0.5); }
-  .orb.listening { background: radial-gradient(circle at 35% 35%,#6affb8,#22c55e 60%,#15803d); box-shadow: 0 0 0 8px rgba(77,255,145,0.1),0 8px 32px rgba(34,197,94,0.5); animation: orbPulse 1.2s infinite; }
-  .orb.thinking { background: radial-gradient(circle at 35% 35%,#c4b5fd,#7c6aff 60%,#4c3adf); animation: orbSpin 2s linear infinite; }
-  @keyframes orbPulse { 0%,100% { transform:scale(1); } 50% { transform:scale(1.08); } }
-  @keyframes orbSpin { from { filter:hue-rotate(0deg); } to { filter:hue-rotate(360deg); } }
-  .orb svg { opacity:0.95; pointer-events:none; }
-
-  .orb-ring { position:absolute; border-radius:50%; border:2px solid rgba(124,106,255,0.4); animation: ringExpand 2s infinite; pointer-events:none; }
-  .orb-ring:nth-child(2) { animation-delay:0.6s; }
-  .orb-ring:nth-child(3) { animation-delay:1.2s; }
-  @keyframes ringExpand { 0% { width:72px; height:72px; opacity:0.8; } 100% { width:130px; height:130px; opacity:0; } }
-  .listening .orb-ring { border-color:rgba(77,255,145,0.5); }
-
-  /* Input */
-  .input-area { padding:10px 18px 16px; flex-shrink:0; border-top:1px solid var(--border); }
-  .input-row { display:flex; gap:8px; align-items:flex-end; }
-  .input-wrap {
-    flex:1; background:var(--surface); border:1px solid var(--border);
-    border-radius:10px; display:flex; align-items:center;
-    padding:2px 4px 2px 12px; transition: border-color 0.2s;
-  }
-  .input-wrap:focus-within { border-color:rgba(124,106,255,0.4); }
-  textarea {
-    flex:1; background:transparent; border:none; outline:none;
-    color:var(--text); font-size:13px; font-family:inherit;
-    resize:none; min-height:36px; max-height:90px;
-    padding:8px 4px 8px 0; line-height:1.4;
-    -webkit-app-region: no-drag;
-  }
-  textarea::placeholder { color:var(--muted); }
-  .send-btn {
-    width:36px; height:36px; border-radius:8px; flex-shrink:0;
-    background:linear-gradient(135deg,#5b4fe8,#7c6aff);
-    border:none; cursor:pointer; color:#fff;
-    display:flex; align-items:center; justify-content:center;
-    transition:all 0.15s; -webkit-app-region:no-drag;
-  }
-  .send-btn:hover { transform:scale(1.05); opacity:0.9; }
-  .hint { font-size:10px; color:var(--muted); text-align:center; padding:4px 0 2px; opacity:0.6; }
-
-  /* ── Settings Panel ── */
-  .panel {
-    position: absolute; inset: 0; z-index: 20;
-    background: linear-gradient(145deg,#0d0d1a,#0a0a12);
-    border-radius: 16px;
-    display: flex; flex-direction: column;
-    padding: 0;
-    transform: translateX(100%);
-    transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
-  }
-  .panel.open { transform: translateX(0); }
-
-  .panel-header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 16px 18px;
-    border-bottom: 1px solid var(--border);
-    -webkit-app-region: drag;
-  }
-  .panel-title { font-size: 14px; font-weight: 600; color: var(--text); }
-  .panel-close {
-    width: 28px; height: 28px; border-radius: 8px;
-    border: 1px solid var(--border); background: var(--surface);
-    color: var(--muted); cursor: pointer; font-size: 14px;
-    display: flex; align-items: center; justify-content: center;
-    -webkit-app-region: no-drag; transition: all 0.15s;
-  }
-  .panel-close:hover { background: rgba(255,255,255,0.1); color: var(--text); }
-
-  .panel-body { flex: 1; overflow-y: auto; padding: 20px 18px; display: flex; flex-direction: column; gap: 20px; }
-
-  .field { display: flex; flex-direction: column; gap: 6px; }
-  .field label { font-size: 11px; color: var(--muted); font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; }
-  .field input, .field select {
-    padding: 10px 12px;
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 8px; color: var(--text); font-size: 13px;
-    outline: none; font-family: inherit;
-    -webkit-app-region: no-drag;
-    transition: border-color 0.2s;
-  }
-  .field input:focus, .field select:focus { border-color: rgba(124,106,255,0.4); }
-  .field select option { background: #1a1a2e; color: var(--text); }
-  .field-hint { font-size: 11px; color: var(--muted); line-height: 1.5; }
-  .field-hint a { color: var(--accent2); text-decoration: none; cursor: pointer; }
-
-  .save-btn {
-    padding: 11px 16px; border-radius: 8px;
-    background: linear-gradient(135deg,#5b4fe8,#7c6aff);
-    border: none; color: #fff; font-size: 13px; font-weight: 600;
-    cursor: pointer; -webkit-app-region: no-drag; transition: opacity 0.15s;
-  }
-  .save-btn:hover { opacity: 0.9; }
-
-  .danger-btn {
-    padding: 10px 16px; border-radius: 8px;
-    background: rgba(255,77,77,0.08); border: 1px solid rgba(255,77,77,0.2);
-    color: #ff9999; font-size: 13px; cursor: pointer;
-    -webkit-app-region: no-drag; transition: all 0.15s;
-  }
-  .danger-btn:hover { background: rgba(255,77,77,0.15); }
-
-  .divider { height: 1px; background: var(--border); }
-
-  /* Setup overlay (first time) */
-  .setup-overlay {
-    position: absolute; inset: 0; z-index: 30;
-    background: linear-gradient(145deg,#0d0d1a,#0a0a12);
-    border-radius: 16px;
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    gap: 16px; padding: 40px 32px;
-  }
-  .setup-overlay.hidden { display: none; }
-  .setup-icon { font-size: 40px; }
-  .setup-title { font-size: 20px; font-weight: 700; color: var(--text); text-align: center; }
-  .setup-sub { font-size: 12px; color: var(--muted); text-align: center; line-height: 1.6; }
-  .setup-input {
-    width: 100%; padding: 10px 14px;
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 10px; color: var(--text); font-size: 13px;
-    outline: none; font-family: inherit; -webkit-app-region: no-drag;
-  }
-  .setup-input:focus { border-color: rgba(124,106,255,0.4); }
-  .setup-btn {
-    width: 100%; padding: 12px;
-    background: linear-gradient(135deg,#5b4fe8,#7c6aff);
-    border: none; border-radius: 10px; color: #fff;
-    font-size: 14px; font-weight: 600; cursor: pointer;
-    -webkit-app-region: no-drag; transition: opacity 0.15s;
-  }
-  .setup-btn:hover { opacity: 0.9; }
-  .setup-hint { font-size: 11px; color: var(--muted); }
-  .setup-hint a { color: var(--accent2); text-decoration: none; cursor: pointer; }
-
-  .gear-btn {
-    width: 26px; height: 26px; border-radius: 6px;
-    border: 1px solid var(--border); background: var(--surface);
-    color: var(--muted); cursor: pointer; font-size: 13px;
-    display: flex; align-items: center; justify-content: center;
-    -webkit-app-region: no-drag; transition: all 0.15s;
-  }
-  .gear-btn:hover { background: rgba(255,255,255,0.1); color: var(--text); }
-
-  .mic-status { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 6px; margin-top: 4px; }
-  .mic-status.ok { color: var(--success); }
-  .mic-status.err { color: var(--danger); }
-
-  /* Command list */
-  .cmd-list { display: flex; flex-direction: column; gap: 4px; }
-  .cmd-row {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 8px 10px; border-radius: 8px;
-    background: var(--surface); border: 1px solid var(--border);
-    font-size: 12px;
-  }
-  .cmd-row span { color: var(--muted); }
-  kbd {
-    background: rgba(124,106,255,0.12); border: 1px solid rgba(124,106,255,0.25);
-    color: var(--accent2); border-radius: 5px;
-    padding: 2px 8px; font-size: 11px; font-family: inherit; white-space: nowrap;
-  }
-  .cmd-example { justify-content: flex-start; gap: 10px; }
-  .cmd-example span { color: var(--text); }
-  .ex-icon { font-size: 14px; flex-shrink: 0; }
+  /* ── Typing dots ── */
+  .typing{display:flex;gap:4px;align-items:center;padding:4px 0}
+  .typing span{width:7px;height:7px;border-radius:50%;background:var(--accent);
+    animation:bounce .8s ease-in-out infinite}
+  .typing span:nth-child(2){animation-delay:.15s}
+  .typing span:nth-child(3){animation-delay:.3s}
+  @keyframes bounce{0%,80%,100%{transform:scale(0.6);opacity:.4}40%{transform:scale(1);opacity:1}}
 </style>
 </head>
 <body>
 
-<div id="app">
+<!-- ── Setup Overlay ── -->
+<div id="setup" style="display:none">
+  <div class="orb-small" style="width:56px;height:56px;box-shadow:0 0 24px var(--accent)"></div>
+  <h2>Welcome to Nova</h2>
+  <p>Nova uses OpenRouter to power AI responses.<br>Enter your OpenRouter API key to get started.</p>
+  <input type="password" id="setupKey" placeholder="sk-or-v1-..." autocomplete="off" spellcheck="false"/>
+  <p class="hint">Get a free key at <a onclick="openRouter()">openrouter.ai</a> — it's free!</p>
+  <button class="btn btn-primary" id="setupSave" style="width:100%">Start Nova →</button>
+</div>
 
-  <!-- ── First-time setup overlay ── -->
-  <div class="setup-overlay" id="setupOverlay">
-    <div class="setup-icon">🤖</div>
-    <div class="setup-title">Set up Nova</div>
-    <div class="setup-sub">
-      Nova uses <strong>OpenRouter</strong> — 100% free models available.<br/>
-      Get a free key at <a onclick="window.open('https://openrouter.ai/keys')" style="color:var(--accent2);cursor:pointer">openrouter.ai/keys</a>
+<!-- ── Main App ── -->
+<div id="main" style="display:none">
+
+  <!-- Titlebar -->
+  <div id="titlebar">
+    <div class="logo">
+      <div class="orb-small"></div>
+      <span>Nova</span>
     </div>
-    <input class="setup-input" type="password" id="apiKeyInput" placeholder="sk-or-v1-..." autocomplete="off" />
-    <button class="setup-btn" id="setupBtn">Start Nova →</button>
-    <div class="setup-hint">Key stored locally on your device only.</div>
+    <div class="controls">
+      <button class="tbtn" id="btnSettings" title="Settings">⚙</button>
+      <button class="tbtn" onclick="electronAPI.window.minimize()" title="Minimize">−</button>
+      <button class="tbtn close" onclick="electronAPI.window.close()" title="Close">✕</button>
+    </div>
   </div>
 
-  <!-- ── Settings panel ── -->
-  <div class="panel" id="settingsPanel">
-    <div class="panel-header">
-      <div class="panel-title">Settings</div>
-      <button class="panel-close" id="panelCloseBtn">✕</button>
-    </div>
-    <div class="panel-body">
+  <!-- Content area -->
+  <div id="content">
 
-      <!-- Shortcuts / Commands -->
-      <div class="field">
-        <label>Shortcuts</label>
-        <div class="cmd-list">
-          <div class="cmd-row"><kbd>Alt+Space</kbd><span>Toggle Nova window</span></div>
-          <div class="cmd-row"><kbd>Click Orb</kbd><span>Start / stop listening</span></div>
-          <div class="cmd-row"><kbd>Enter</kbd><span>Send typed message</span></div>
-          <div class="cmd-row"><kbd>Shift+Enter</kbd><span>New line in message</span></div>
-          <div class="cmd-row"><kbd>Esc</kbd><span>Stop listening</span></div>
+    <!-- Chat view -->
+    <div id="chatView" style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+      <div id="chatWrap"></div>
+      <div id="orbWrap">
+        <div id="orb" onclick="toggleListening()" title="Click to speak (or Alt+Space)">🎙</div>
+        <div id="statusTxt">Click orb or press Alt+Space to speak</div>
+        <div id="transcript"></div>
+      </div>
+      <div id="inputBar">
+        <input type="text" id="textInput" placeholder="Type a message…" autocomplete="off"/>
+        <button id="sendBtn" onclick="sendText()" title="Send">➤</button>
+      </div>
+    </div>
+
+    <!-- Settings view -->
+    <div id="settingsPanel">
+      <h3>⚙ Settings</h3>
+
+      <div class="sSection">
+        <div class="sRow">
+          <span class="sLabel">AI MODEL</span>
+          <select class="sSelect" id="modelSelect">
+            <option value="minimax/minimax-m2.5:free">MiniMax M2.5 (free)</option>
+            <option value="mistralai/mistral-7b-instruct:free">Mistral 7B (free)</option>
+            <option value="meta-llama/llama-3.2-3b-instruct:free">Llama 3.2 3B (free)</option>
+            <option value="google/gemma-3-4b-it:free">Gemma 3 4B (free)</option>
+            <option value="qwen/qwen3-8b:free">Qwen3 8B (free)</option>
+            <option value="openai/gpt-4o-mini">GPT-4o Mini</option>
+            <option value="anthropic/claude-3-haiku">Claude 3 Haiku</option>
+          </select>
+        </div>
+        <div class="sRow">
+          <span class="sLabel">MICROPHONE</span>
+          <select class="sSelect" id="micSelect">
+            <option value="">Default microphone</option>
+          </select>
+        </div>
+        <div class="sRow">
+          <span class="sLabel">VOICE</span>
+          <select class="sSelect" id="voiceSelect">
+            <option value="">Default voice</option>
+          </select>
         </div>
       </div>
 
-      <div class="divider"></div>
-
-      <!-- What Nova can do -->
-      <div class="field">
-        <label>What Nova can do</label>
-        <div class="cmd-list">
-          <div class="cmd-row cmd-example"><span class="ex-icon">💬</span><span>Answer any question</span></div>
-          <div class="cmd-row cmd-example"><span class="ex-icon">🧮</span><span>Do math & calculations</span></div>
-          <div class="cmd-row cmd-example"><span class="ex-icon">✍️</span><span>Write emails, summaries, code</span></div>
-          <div class="cmd-row cmd-example"><span class="ex-icon">🌐</span><span>Translate text</span></div>
-          <div class="cmd-row cmd-example"><span class="ex-icon">💡</span><span>Brainstorm ideas</span></div>
-          <div class="cmd-row cmd-example"><span class="ex-icon">📋</span><span>Explain anything</span></div>
-        </div>
+      <div class="sSection">
+        <h3 style="font-size:13px;margin-bottom:0">⌨ Voice Commands</h3>
+        <table class="cmdTable">
+          <tr><td>Hey Nova / Go</td><td>Send message to AI</td></tr>
+          <tr><td>Clear / Reset</td><td>Clear conversation</td></tr>
+          <tr><td>Stop</td><td>Stop Nova speaking</td></tr>
+          <tr><td>Alt+Space</td><td>Toggle microphone</td></tr>
+          <tr><td>Esc</td><td>Stop listening</td></tr>
+        </table>
       </div>
 
-      <div class="divider"></div>
-
-      <!-- Model -->
-      <div class="field">
-        <label>AI Model</label>
-        <select id="modelSelect">
-          <option value="minimax/minimax-m2.5:free">MiniMax M2.5 (Free)</option>
-          <option value="google/gemma-4-31b-it:free">Google Gemma 4 31B (Free)</option>
-          <option value="nvidia/nemotron-3-super-120b-a12b:free">NVIDIA Nemotron 120B (Free)</option>
-          <option value="qwen/qwen3-235b-a22b:free">Qwen3 235B (Free)</option>
-          <option value="deepseek/deepseek-r1:free">DeepSeek R1 (Free)</option>
-          <option value="meta-llama/llama-4-maverick:free">Llama 4 Maverick (Free)</option>
-          <option value="openai/gpt-4o-mini">GPT-4o Mini (Paid)</option>
-        </select>
+      <div class="sSection">
+        <h3 style="font-size:13px;margin-bottom:0">🔑 API Key</h3>
+        <span class="sLabel" style="color:var(--green)">✓ OpenRouter key is saved</span>
+        <button class="btn" onclick="resetKey()"
+          style="background:var(--card);border:1px solid var(--border);color:var(--danger);font-size:12px;padding:7px 12px;margin-top:4px;width:fit-content">
+          Reset key (re-enter on next launch)
+        </button>
       </div>
 
-      <!-- Microphone -->
-      <div class="field">
-        <label>Microphone</label>
-        <select id="micSelect">
-          <option value="">Default Microphone</option>
-        </select>
-        <div class="mic-status" id="micStatus">Checking...</div>
+      <div class="sSection" style="align-items:center">
+        <span class="sLabel">Nova v1.0.0 · Powered by OpenRouter</span>
+        <a style="color:var(--accent2);font-size:12px;cursor:pointer" onclick="electronAPI.shell.open('https://openrouter.ai')">openrouter.ai ↗</a>
       </div>
-
-      <button class="save-btn" id="saveSettingsBtn">Save</button>
-
-      <div class="divider"></div>
-
-      <div class="field">
-        <button class="danger-btn" id="clearChatBtn">Clear Chat History</button>
-      </div>
-
     </div>
+
   </div>
 
-  <!-- ── Titlebar ── -->
-  <div class="titlebar">
-    <div class="title">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <circle cx="8" cy="8" r="7" fill="url(#g1)"/>
-        <defs><radialGradient id="g1" cx="35%" cy="35%"><stop offset="0%" stop-color="#c4b5fd"/><stop offset="100%" stop-color="#5b4fe8"/></radialGradient></defs>
-      </svg>
-      Nova
-    </div>
-    <div style="display:flex;gap:6px;align-items:center;">
-      <button class="gear-btn" id="settingsBtn" title="Settings">⚙</button>
-      <div class="win-controls">
-        <button class="win-btn" id="minBtn">—</button>
-        <button class="win-btn close" id="closeBtn">✕</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Status bar ── -->
-  <div class="status-bar">
-    <div class="status-dot" id="statusDot"></div>
-    <div class="status-text" id="statusText">Ready</div>
-    <div class="voice-bars" id="voiceBars">
-      <div class="voice-bar"></div><div class="voice-bar"></div>
-      <div class="voice-bar"></div><div class="voice-bar"></div>
-      <div class="voice-bar"></div>
-    </div>
-  </div>
-
-  <!-- ── Chat ── -->
-  <div class="chat" id="chat"></div>
-
-  <!-- ── Orb ── -->
-  <div class="orb-wrap">
-    <div class="orb" id="orb" title="Click to speak (Alt+Space)">
-      <div class="orb-ring"></div><div class="orb-ring"></div><div class="orb-ring"></div>
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round">
-        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-        <line x1="12" y1="19" x2="12" y2="23"/>
-        <line x1="8" y1="23" x2="16" y2="23"/>
-      </svg>
-    </div>
-  </div>
-
-  <!-- ── Text input ── -->
-  <div class="input-area">
-    <div class="input-row">
-      <div class="input-wrap">
-        <textarea id="textInput" rows="1" placeholder="Type a message..."></textarea>
-      </div>
-      <button class="send-btn" id="sendBtn">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
-        </svg>
-      </button>
-    </div>
-    <div class="hint">🎤 Click orb to speak • Alt+Space</div>
+  <!-- Bottom nav -->
+  <div id="nav">
+    <button class="navBtn active" id="navChat" onclick="switchTab('chat')" title="Chat">💬</button>
+    <button class="navBtn" id="navSettings" onclick="switchTab('settings')" title="Settings">⚙</button>
   </div>
 
 </div>
 
+<!-- Toast -->
+<div id="toast"></div>
+
 <script>
-// ─── Persisted state ───────────────────────────────────────────────────────────
-let apiKey   = localStorage.getItem('nova_key') || '';
-let model    = localStorage.getItem('nova_model') || 'minimax/minimax-m2.5:free';
-let selectedMicId = localStorage.getItem('nova_mic') || '';
-let messages = [];
-let isListening = false;
-let isThinking  = false;
+// ════════════════════════════════════════════════════════════════════
+//  Nova Renderer — all logic
+// ════════════════════════════════════════════════════════════════════
+
+let config = {};            // loaded from userData JSON
 let recognition = null;
-let activeStream = null;
+let isListening  = false;
+let isSpeaking   = false;
+let messages     = [];      // chat history
 
-// ─── Elements ─────────────────────────────────────────────────────────────────
-const $app          = document.getElementById('app');
-const $setupOverlay = document.getElementById('setupOverlay');
-const $apiKeyInput  = document.getElementById('apiKeyInput');
-const $setupBtn     = document.getElementById('setupBtn');
-const $chat         = document.getElementById('chat');
-const $orb          = document.getElementById('orb');
-const $statusDot    = document.getElementById('statusDot');
-const $statusText   = document.getElementById('statusText');
-const $voiceBars    = document.getElementById('voiceBars');
-const $textInput    = document.getElementById('textInput');
-const $settingsBtn  = document.getElementById('settingsBtn');
-const $settingsPanel= document.getElementById('settingsPanel');
-const $panelClose   = document.getElementById('panelCloseBtn');
-const $modelSelect  = document.getElementById('modelSelect');
-const $micSelect    = document.getElementById('micSelect');
-const $micStatus    = document.getElementById('micStatus');
-const $saveBtn      = document.getElementById('saveSettingsBtn');
-const $clearChat    = document.getElementById('clearChatBtn');
+const SYSTEM_PROMPT = `You are Nova, a helpful, concise voice assistant. 
+Keep responses short and conversational (1-3 sentences unless detail is needed).
+Be friendly and natural.`;
 
-// ─── Boot ─────────────────────────────────────────────────────────────────────
-(async () => {
-  await requestMicPermission();
-  await loadMicList();
+// ── Boot ─────────────────────────────────────────────────────────────
+async function boot() {
+  config = await electronAPI.config.get();
 
-  if (apiKey) {
-    $setupOverlay.classList.add('hidden');
-    greet();
-  }
-})();
-
-// ─── Mic permission (ask upfront, properly) ────────────────────────────────────
-async function requestMicPermission() {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    stream.getTracks().forEach(t => t.stop()); // release immediately
-    return true;
-  } catch(e) {
-    return false;
+  if (!config.apiKey) {
+    document.getElementById('setup').style.display = 'flex';
+  } else {
+    document.getElementById('main').style.display  = 'flex';
+    initApp();
   }
 }
 
-async function loadMicList() {
-  try {
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const mics = devices.filter(d => d.kind === 'audioinput');
+async function initApp() {
+  populateVoices();
+  await populateMics();
+  applyConfig();
+  setupRecognition();
+  addMessage('system', 'Nova is ready. Click the orb or press Alt+Space to speak.');
+}
 
-    $micSelect.innerHTML = '<option value="">Default Microphone</option>';
-    mics.forEach(mic => {
-      const opt = document.createElement('option');
-      opt.value = mic.deviceId;
-      opt.textContent = mic.label || `Microphone ${$micSelect.options.length}`;
-      if (mic.deviceId === selectedMicId) opt.selected = true;
-      $micSelect.appendChild(opt);
-    });
+// ── Config helpers ────────────────────────────────────────────────────
+function saveConfig() {
+  electronAPI.config.set(config);
+}
 
-    if (mics.length > 0) {
-      $micStatus.textContent = `✓ ${mics.length} microphone${mics.length>1?'s':''} found`;
-      $micStatus.className = 'mic-status ok';
-    } else {
-      $micStatus.textContent = '✗ No microphone found';
-      $micStatus.className = 'mic-status err';
-    }
-  } catch(e) {
-    $micStatus.textContent = '✗ Cannot access microphones — allow permission';
-    $micStatus.className = 'mic-status err';
+function applyConfig() {
+  const modelSel = document.getElementById('modelSelect');
+  if (config.model) modelSel.value = config.model;
+
+  const micSel = document.getElementById('micSelect');
+  if (config.micDeviceId) {
+    // set after options are populated
+    micSel.value = config.micDeviceId;
   }
+
+  const voiceSel = document.getElementById('voiceSelect');
+  if (config.voiceName) voiceSel.value = config.voiceName;
+
+  modelSel.onchange = () => { config.model = modelSel.value; saveConfig(); };
+  micSel.onchange   = () => { config.micDeviceId = micSel.value; saveConfig(); setupRecognition(); };
+  voiceSel.onchange = () => { config.voiceName = voiceSel.value; saveConfig(); };
 }
 
-// ─── First-time setup ─────────────────────────────────────────────────────────
-$setupBtn.onclick = () => {
-  const key = $apiKeyInput.value.trim();
-  if (!key) { shake($apiKeyInput); return; }
-  apiKey = key;
-  localStorage.setItem('nova_key', key);
-  $setupOverlay.classList.add('hidden');
-  greet();
-};
-$apiKeyInput.onkeydown = e => { if (e.key === 'Enter') $setupBtn.click(); };
-
-function shake(el) {
-  el.style.borderColor = 'rgba(255,77,77,0.6)';
-  el.animate([{transform:'translateX(-4px)'},{transform:'translateX(4px)'},{transform:'none'}],{duration:250});
-  setTimeout(()=>el.style.borderColor='',1000);
-}
-
-// ─── Settings panel ───────────────────────────────────────────────────────────
-$settingsBtn.onclick = () => {
-  $modelSelect.value = model;
-  $micSelect.value   = selectedMicId;
-  loadMicList();
-  $settingsPanel.classList.add('open');
-};
-
-$panelClose.onclick = () => $settingsPanel.classList.remove('open');
-
-$saveBtn.onclick = () => {
-  model = $modelSelect.value;
-  localStorage.setItem('nova_model', model);
-
-  selectedMicId = $micSelect.value;
-  localStorage.setItem('nova_mic', selectedMicId);
-
-  $settingsPanel.classList.remove('open');
-  addMsg('system', `✓ Saved — using ${$modelSelect.options[$modelSelect.selectedIndex].text}`);
-};
-
-$clearChat.onclick = () => {
-  messages = [];
-  $chat.innerHTML = '';
-  $settingsPanel.classList.remove('open');
-  addMsg('system', 'Chat cleared.');
-};
-
-// ─── Window controls ──────────────────────────────────────────────────────────
-document.getElementById('closeBtn').onclick = () => { if (window.electronAPI) window.electronAPI.closeWindow(); };
-document.getElementById('minBtn').onclick   = () => { if (window.electronAPI) window.electronAPI.minimizeWindow(); };
-
-// ─── Greet ────────────────────────────────────────────────────────────────────
-function greet() {
-  const h = new Date().getHours();
-  const g = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
-  addMsg('assistant', `${g}! I'm Nova. Click the orb or press **Alt+Space** to talk, or type below.`);
-  setStatus('ready', 'Ready — click orb or press Alt+Space');
-}
-
-// ─── Status ───────────────────────────────────────────────────────────────────
-function setStatus(state, text) {
-  $statusDot.className = 'status-dot' + (state !== 'ready' ? ' ' + state : '');
-  $statusText.textContent = text;
-  $orb.className = 'orb' + (state === 'listening' ? ' listening' : state === 'thinking' ? ' thinking' : '');
-  $app.className = state === 'listening' ? 'listening' : '';
-  $voiceBars.className = 'voice-bars' + (state === 'listening' ? ' active' : '');
-}
-
-// ─── Chat ─────────────────────────────────────────────────────────────────────
-function addMsg(role, text) {
-  const div = document.createElement('div');
-  div.className = `msg ${role}`;
-  div.innerHTML = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-  $chat.appendChild(div);
-  $chat.scrollTop = $chat.scrollHeight;
-  return div;
-}
-
-function addThinking() {
-  const div = document.createElement('div');
-  div.className = 'msg assistant'; div.id = 'thinkBubble';
-  div.innerHTML = '<div class="thinking-dots"><span></span><span></span><span></span></div>';
-  $chat.appendChild(div); $chat.scrollTop = $chat.scrollHeight;
-}
-function removeThinking() { document.getElementById('thinkBubble')?.remove(); }
-
-// ─── Speech recognition ────────────────────────────────────────────────────────
-$orb.onclick = toggleListen;
-
-function toggleListen() {
-  if (isThinking) return;
-  if (isListening) { stopListening(); return; }
-  startListening();
-}
-
-async function startListening() {
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) { addMsg('error', 'Speech recognition not supported in this browser/version.'); return; }
-
-  // Request mic with selected device
-  try {
-    const constraints = { audio: selectedMicId ? { deviceId: { exact: selectedMicId } } : true };
-    activeStream = await navigator.mediaDevices.getUserMedia(constraints);
-    // we got permission — stop stream (recognition manages its own)
-    activeStream.getTracks().forEach(t => t.stop());
-    activeStream = null;
-  } catch(e) {
-    addMsg('error', `Microphone error: ${e.message}`);
+// ── Setup screen ──────────────────────────────────────────────────────
+document.getElementById('setupSave').onclick = async () => {
+  const key = document.getElementById('setupKey').value.trim();
+  if (!key || !key.startsWith('sk-or-')) {
+    toast('Enter a valid OpenRouter key (starts with sk-or-)');
     return;
   }
+  config.apiKey = key;
+  saveConfig();
+  document.getElementById('setup').style.display = 'none';
+  document.getElementById('main').style.display  = 'flex';
+  initApp();
+};
+
+document.getElementById('setupKey').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('setupSave').click();
+});
+
+function openRouter() { electronAPI.shell.open('https://openrouter.ai/keys'); }
+
+function resetKey() {
+  config.apiKey = '';
+  saveConfig();
+  toast('Key cleared — restart Nova to re-enter');
+}
+
+// ── Mic enumeration ───────────────────────────────────────────────────
+async function populateMics() {
+  try {
+    // Request permission first so labels are available
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream.getTracks().forEach(t => t.stop()); // release immediately
+
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const mics    = devices.filter(d => d.kind === 'audioinput');
+    const sel     = document.getElementById('micSelect');
+    sel.innerHTML = '<option value="">Default microphone</option>';
+    mics.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d.deviceId;
+      opt.text  = d.label || `Microphone ${sel.options.length}`;
+      sel.appendChild(opt);
+    });
+    if (config.micDeviceId) sel.value = config.micDeviceId;
+  } catch(e) {
+    console.warn('Mic enum failed:', e);
+  }
+}
+
+// ── Voice enumeration ─────────────────────────────────────────────────
+function populateVoices() {
+  const fill = () => {
+    const voices = speechSynthesis.getVoices();
+    const sel    = document.getElementById('voiceSelect');
+    sel.innerHTML = '<option value="">Default voice</option>';
+    voices.forEach(v => {
+      const opt = document.createElement('option');
+      opt.value = v.name;
+      opt.text  = `${v.name} (${v.lang})`;
+      sel.appendChild(opt);
+    });
+    if (config.voiceName) sel.value = config.voiceName;
+  };
+  if (speechSynthesis.getVoices().length) fill();
+  speechSynthesis.onvoiceschanged = fill;
+}
+
+// ── Speech recognition ────────────────────────────────────────────────
+function setupRecognition() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { setStatus('Speech recognition not supported'); return; }
+
+  if (recognition) { try { recognition.abort(); } catch{} }
 
   recognition = new SR();
-  recognition.continuous = false;
+  recognition.continuous     = false;
   recognition.interimResults = true;
-  recognition.lang = 'en-US';
+  recognition.lang           = 'en-US';
 
-  isListening = true;
-  setStatus('listening', 'Listening...');
+  recognition.onstart = () => {
+    isListening = true;
+    setOrb('listening');
+    setStatus('Listening…');
+  };
 
-  let final = '';
-
-  recognition.onresult = e => {
-    let interim = '';
-    final = '';
+  recognition.onresult = (e) => {
+    let interim = '', final = '';
     for (let i = e.resultIndex; i < e.results.length; i++) {
       if (e.results[i].isFinal) final += e.results[i][0].transcript;
       else interim += e.results[i][0].transcript;
     }
-    $statusText.textContent = final || interim || 'Listening...';
+    document.getElementById('transcript').textContent = final || interim;
+    if (final) {
+      document.getElementById('transcript').textContent = '';
+      handleVoiceInput(final.trim());
+    }
+  };
+
+  recognition.onerror = (e) => {
+    console.warn('SR error:', e.error);
+    if (e.error === 'not-allowed') setStatus('Mic access denied — check permissions');
+    else if (e.error !== 'aborted') setStatus('Mic error: ' + e.error);
+    stopListening();
   };
 
   recognition.onend = () => {
-    isListening = false;
-    if (final.trim()) sendMessage(final.trim());
-    else { setStatus('ready', 'Ready — click orb or press Alt+Space'); }
+    if (isListening) {
+      // auto-restart if not intentionally stopped
+      try { recognition.start(); } catch{}
+    } else {
+      setOrb('idle');
+      setStatus('Click orb or press Alt+Space to speak');
+    }
   };
+}
 
-  recognition.onerror = e => {
-    isListening = false;
-    setStatus('ready', 'Ready');
-    if (e.error !== 'no-speech') addMsg('error', `Mic error: ${e.error}`);
-  };
+function toggleListening() {
+  if (isSpeaking) { stopSpeaking(); return; }
+  if (isListening) stopListening();
+  else startListening();
+}
 
-  recognition.start();
+function startListening() {
+  if (!recognition) { setupRecognition(); }
+  if (isSpeaking) stopSpeaking();
+  stopSpeaking();
+  isListening = true;
+  try { recognition.start(); }
+  catch(e) { console.warn('SR start:', e); }
 }
 
 function stopListening() {
-  recognition?.stop(); recognition = null;
   isListening = false;
-  setStatus('ready', 'Ready');
+  try { recognition.stop(); } catch{}
+  setOrb('idle');
+  setStatus('Click orb or press Alt+Space to speak');
+  document.getElementById('transcript').textContent = '';
 }
 
-// ─── Send to OpenRouter ────────────────────────────────────────────────────────
-async function sendMessage(text) {
-  if (!text.trim() || isThinking) return;
-  if (!apiKey) { $setupOverlay.classList.remove('hidden'); return; }
+// Esc stops listening
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { stopListening(); stopSpeaking(); }
+});
 
+// ── Voice command parsing ─────────────────────────────────────────────
+function handleVoiceInput(text) {
+  const lower = text.toLowerCase();
+  if (lower.match(/^(clear|reset|new chat)$/)) { clearChat(); return; }
+  if (lower.match(/^stop$/)) { stopSpeaking(); return; }
+  // Otherwise send to AI
+  sendMessage(text);
+}
+
+// ── Chat ──────────────────────────────────────────────────────────────
+function addMessage(role, text) {
+  const wrap = document.getElementById('chatWrap');
+  const div  = document.createElement('div');
+  div.className = 'msg ' + role;
+  div.textContent = text;
+  wrap.appendChild(div);
+  wrap.scrollTop = wrap.scrollHeight;
+  return div;
+}
+
+function addTyping() {
+  const wrap = document.getElementById('chatWrap');
+  const div  = document.createElement('div');
+  div.className = 'msg nova';
+  div.id = 'typing';
+  div.innerHTML = '<div class="typing"><span></span><span></span><span></span></div>';
+  wrap.appendChild(div);
+  wrap.scrollTop = wrap.scrollHeight;
+  return div;
+}
+
+function clearChat() {
+  messages = [];
+  document.getElementById('chatWrap').innerHTML = '';
+  addMessage('system', 'Chat cleared.');
+  toast('Conversation cleared');
+}
+
+// ── Send message ──────────────────────────────────────────────────────
+async function sendMessage(text) {
+  if (!text.trim()) return;
   stopListening();
-  addMsg('user', text);
+
+  addMessage('user', text);
   messages.push({ role: 'user', content: text });
 
-  isThinking = true;
-  setStatus('thinking', 'Thinking...');
-  addThinking();
+  const typing = addTyping();
+  setOrb('thinking');
+  setStatus('Thinking…');
 
   try {
-    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    const model = config.model || 'minimax/minimax-m2.5:free';
+    const resp  = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-        'HTTP-Referer': 'https://nova-assistant.app',
-        'X-Title': 'Nova Voice Assistant',
+        'Content-Type':  'application/json',
+        'Authorization': 'Bearer ' + config.apiKey,
+        'HTTP-Referer':  'https://nova-assistant.app',
+        'X-Title':       'Nova Voice Assistant',
       },
       body: JSON.stringify({
         model,
         messages: [
-          { role: 'system', content: 'You are Nova, a smart and friendly Windows voice assistant. Be concise — keep responses to 1-3 sentences for voice. Answer questions, do calculations, help with tasks, writing, and ideas.' },
-          ...messages.slice(-16),
+          { role: 'system', content: SYSTEM_PROMPT },
+          ...messages.slice(-10),        // keep last 10 for context
         ],
-        max_tokens: 500,
-        temperature: 0.7,
       }),
     });
 
-    const data = await res.json();
+    const data = await resp.json();
+    typing.remove();
 
-    if (!res.ok) {
-      const errMsg = data?.error?.message || `API error ${res.status}`;
-      throw new Error(errMsg);
+    if (!resp.ok) {
+      const errMsg = data?.error?.message || 'API error ' + resp.status;
+      addMessage('nova', '⚠ ' + errMsg);
+      setOrb('idle');
+      setStatus('Error — see message above');
+      return;
     }
 
-    const reply = data.choices[0].message.content.trim();
+    const reply = data.choices?.[0]?.message?.content || '(no response)';
     messages.push({ role: 'assistant', content: reply });
-    removeThinking();
-    addMsg('assistant', reply);
+    addMessage('nova', reply);
     speak(reply);
-    setStatus('ready', 'Ready — click orb or press Alt+Space');
 
-  } catch(err) {
-    removeThinking();
-    addMsg('error', `Error: ${err.message}`);
-    setStatus('ready', 'Ready');
+  } catch(e) {
+    typing.remove();
+    addMessage('nova', '⚠ Network error: ' + e.message);
+    setOrb('idle');
+    setStatus('Connection failed');
   }
-
-  isThinking = false;
 }
 
-// ─── Text input ───────────────────────────────────────────────────────────────
-$textInput.addEventListener('input', () => {
-  $textInput.style.height = 'auto';
-  $textInput.style.height = Math.min($textInput.scrollHeight, 90) + 'px';
-});
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && isListening) stopListening();
+function sendText() {
+  const inp = document.getElementById('textInput');
+  const txt = inp.value.trim();
+  if (!txt) return;
+  inp.value = '';
+  sendMessage(txt);
+}
+
+document.getElementById('textInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendText(); }
 });
 
-$textInput.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    const v = $textInput.value.trim();
-    if (v) { $textInput.value = ''; $textInput.style.height = 'auto'; sendMessage(v); }
+// ── TTS ───────────────────────────────────────────────────────────────
+function speak(text) {
+  if (!text) return;
+  stopSpeaking();
+
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.rate   = 1.05;
+  utter.pitch  = 1;
+  utter.volume = 1;
+
+  // Pick selected voice
+  const voiceName = config.voiceName;
+  if (voiceName) {
+    const v = speechSynthesis.getVoices().find(v => v.name === voiceName);
+    if (v) utter.voice = v;
   }
-});
-document.getElementById('sendBtn').onclick = () => {
-  const v = $textInput.value.trim();
-  if (v) { $textInput.value = ''; $textInput.style.height = 'auto'; sendMessage(v); }
+
+  utter.onstart = () => { isSpeaking = true; setOrb('speaking'); setStatus('Speaking…'); };
+  utter.onend   = () => { isSpeaking = false; setOrb('idle'); setStatus('Click orb or press Alt+Space to speak'); };
+  utter.onerror = (e) => { console.warn('TTS error:', e); isSpeaking = false; setOrb('idle'); setStatus(''); };
+
+  speechSynthesis.speak(utter);
+}
+
+function stopSpeaking() {
+  if (speechSynthesis.speaking || speechSynthesis.pending) {
+    speechSynthesis.cancel();
+  }
+  isSpeaking = false;
+}
+
+// ── UI helpers ────────────────────────────────────────────────────────
+function setOrb(state) {
+  const orb = document.getElementById('orb');
+  orb.className = '';
+  if (state === 'idle')      { orb.textContent = '🎙'; }
+  if (state === 'listening') { orb.className = 'listening'; orb.textContent = '👂'; }
+  if (state === 'thinking')  { orb.className = 'thinking';  orb.textContent = '🤔'; }
+  if (state === 'speaking')  { orb.className = 'speaking';  orb.textContent = '🔊'; }
+}
+
+function setStatus(txt) { document.getElementById('statusTxt').textContent = txt; }
+
+let toastTimer;
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  const chatView  = document.getElementById('chatView');
+  const settPanel = document.getElementById('settingsPanel');
+  const navChat   = document.getElementById('navChat');
+  const navSett   = document.getElementById('navSettings');
+
+  if (tab === 'chat') {
+    chatView.style.display  = 'flex';
+    settPanel.style.display = 'none';
+    navChat.classList.add('active');
+    navSett.classList.remove('active');
+  } else {
+    chatView.style.display  = 'none';
+    settPanel.style.display = 'flex';
+    navChat.classList.remove('active');
+    navSett.classList.add('active');
+  }
+}
+
+// Settings button in titlebar also toggles
+document.getElementById('btnSettings').onclick = () => {
+  const isChat = document.getElementById('chatView').style.display !== 'none';
+  switchTab(isChat ? 'settings' : 'chat');
+  document.getElementById('navSettings').classList.toggle('active', !isChat);
+  document.getElementById('navChat').classList.toggle('active', isChat);
 };
 
-// ─── TTS ──────────────────────────────────────────────────────────────────────
-const synth = window.speechSynthesis;
-function speak(text) {
-  if (!synth) return;
-  synth.cancel();
-  const clean = text.replace(/\*\*(.*?)\*\*/g,'$1').replace(/\*(.*?)\*/g,'$1');
-  const utt = new SpeechSynthesisUtterance(clean);
-  utt.rate = 1.05; utt.pitch = 1.0; utt.volume = 1.0;
-  const voices = synth.getVoices();
-  const pick = voices.find(v => v.name.includes('Zira') || v.name.includes('David') || v.lang === 'en-US');
-  if (pick) utt.voice = pick;
-  synth.speak(utt);
-}
-if (synth) synth.onvoiceschanged = () => {};
+// ── Launch ────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', boot);
 </script>
 </body>
 </html>

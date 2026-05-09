@@ -1,7 +1,15 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
-  closeWindow: () => ipcRenderer.invoke('window:close'),
-  minimizeWindow: () => ipcRenderer.invoke('window:minimize'),
-  platform: process.platform,
+  config: {
+    get: ()       => ipcRenderer.invoke('config:get'),
+    set: (data)   => ipcRenderer.invoke('config:set', data),
+  },
+  window: {
+    close:    () => ipcRenderer.invoke('window:close'),
+    minimize: () => ipcRenderer.invoke('window:minimize'),
+  },
+  shell: {
+    open: (url) => ipcRenderer.invoke('shell:open', url),
+  },
 });
