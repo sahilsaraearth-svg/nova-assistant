@@ -288,9 +288,27 @@
   }
   .gear-btn:hover { background: rgba(255,255,255,0.1); color: var(--text); }
 
-  .mic-status { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+  .mic-status { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 6px; margin-top: 4px; }
   .mic-status.ok { color: var(--success); }
   .mic-status.err { color: var(--danger); }
+
+  /* Command list */
+  .cmd-list { display: flex; flex-direction: column; gap: 4px; }
+  .cmd-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 10px; border-radius: 8px;
+    background: var(--surface); border: 1px solid var(--border);
+    font-size: 12px;
+  }
+  .cmd-row span { color: var(--muted); }
+  kbd {
+    background: rgba(124,106,255,0.12); border: 1px solid rgba(124,106,255,0.25);
+    color: var(--accent2); border-radius: 5px;
+    padding: 2px 8px; font-size: 11px; font-family: inherit; white-space: nowrap;
+  }
+  .cmd-example { justify-content: flex-start; gap: 10px; }
+  .cmd-example span { color: var(--text); }
+  .ex-icon { font-size: 14px; flex-shrink: 0; }
 </style>
 </head>
 <body>
@@ -318,12 +336,36 @@
     </div>
     <div class="panel-body">
 
+      <!-- Shortcuts / Commands -->
       <div class="field">
-        <label>OpenRouter API Key</label>
-        <input type="password" id="settingsKey" placeholder="sk-or-v1-..." />
-        <div class="field-hint">Free key at <a onclick="window.open('https://openrouter.ai/keys')" style="cursor:pointer">openrouter.ai/keys</a></div>
+        <label>Shortcuts</label>
+        <div class="cmd-list">
+          <div class="cmd-row"><kbd>Alt+Space</kbd><span>Toggle Nova window</span></div>
+          <div class="cmd-row"><kbd>Click Orb</kbd><span>Start / stop listening</span></div>
+          <div class="cmd-row"><kbd>Enter</kbd><span>Send typed message</span></div>
+          <div class="cmd-row"><kbd>Shift+Enter</kbd><span>New line in message</span></div>
+          <div class="cmd-row"><kbd>Esc</kbd><span>Stop listening</span></div>
+        </div>
       </div>
 
+      <div class="divider"></div>
+
+      <!-- What Nova can do -->
+      <div class="field">
+        <label>What Nova can do</label>
+        <div class="cmd-list">
+          <div class="cmd-row cmd-example"><span class="ex-icon">💬</span><span>Answer any question</span></div>
+          <div class="cmd-row cmd-example"><span class="ex-icon">🧮</span><span>Do math & calculations</span></div>
+          <div class="cmd-row cmd-example"><span class="ex-icon">✍️</span><span>Write emails, summaries, code</span></div>
+          <div class="cmd-row cmd-example"><span class="ex-icon">🌐</span><span>Translate text</span></div>
+          <div class="cmd-row cmd-example"><span class="ex-icon">💡</span><span>Brainstorm ideas</span></div>
+          <div class="cmd-row cmd-example"><span class="ex-icon">📋</span><span>Explain anything</span></div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Model -->
       <div class="field">
         <label>AI Model</label>
         <select id="modelSelect">
@@ -337,8 +379,7 @@
         </select>
       </div>
 
-      <div class="divider"></div>
-
+      <!-- Microphone -->
       <div class="field">
         <label>Microphone</label>
         <select id="micSelect">
@@ -347,12 +388,11 @@
         <div class="mic-status" id="micStatus">Checking...</div>
       </div>
 
-      <button class="save-btn" id="saveSettingsBtn">Save Settings</button>
+      <button class="save-btn" id="saveSettingsBtn">Save</button>
 
       <div class="divider"></div>
 
       <div class="field">
-        <label>Conversation</label>
         <button class="danger-btn" id="clearChatBtn">Clear Chat History</button>
       </div>
 
@@ -446,7 +486,6 @@ const $textInput    = document.getElementById('textInput');
 const $settingsBtn  = document.getElementById('settingsBtn');
 const $settingsPanel= document.getElementById('settingsPanel');
 const $panelClose   = document.getElementById('panelCloseBtn');
-const $settingsKey  = document.getElementById('settingsKey');
 const $modelSelect  = document.getElementById('modelSelect');
 const $micSelect    = document.getElementById('micSelect');
 const $micStatus    = document.getElementById('micStatus');
@@ -521,8 +560,6 @@ function shake(el) {
 
 // ─── Settings panel ───────────────────────────────────────────────────────────
 $settingsBtn.onclick = () => {
-  // Populate current values
-  $settingsKey.value = apiKey;
   $modelSelect.value = model;
   $micSelect.value   = selectedMicId;
   loadMicList();
@@ -532,9 +569,6 @@ $settingsBtn.onclick = () => {
 $panelClose.onclick = () => $settingsPanel.classList.remove('open');
 
 $saveBtn.onclick = () => {
-  const key = $settingsKey.value.trim();
-  if (key) { apiKey = key; localStorage.setItem('nova_key', key); }
-
   model = $modelSelect.value;
   localStorage.setItem('nova_model', model);
 
@@ -718,6 +752,10 @@ $textInput.addEventListener('input', () => {
   $textInput.style.height = 'auto';
   $textInput.style.height = Math.min($textInput.scrollHeight, 90) + 'px';
 });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && isListening) stopListening();
+});
+
 $textInput.addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();
